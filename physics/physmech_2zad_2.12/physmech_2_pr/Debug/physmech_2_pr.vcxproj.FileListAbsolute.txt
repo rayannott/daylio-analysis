@@ -1,2 +1,0 @@
-C:\AllDirs\programing 2021\physmech_2_pr\Debug\physmech_2_pr.exe
-C:\AllDirs\programing 2021\physmech_2_pr\Debug\physmech_2_pr.pdb

@@ -1,1 +1,3 @@
 data_*.csv
+__pycache__/
+.vscode/

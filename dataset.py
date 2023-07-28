@@ -6,16 +6,20 @@ from collections import Counter
 from typing import Container, Iterator
 
 
-MOOD_VALUES = {'bad': 1, 'meh': 2, 'ok': 3, 'good': 4, 'great': 5}
+MOOD_VALUES = {'bad': 1., 'meh': 2., 'less ok': 2.5, 'ok': 3., 'alright': 3.5, 'good': 4., 'great': 5., 'awesome': 6.}
 DT_FORMAT = r"%Y-%m-%d %H:%M"
 
-MoodCondition = int | Container[int] | None
+BAD_MOOD = {1., 2., 2.5}
+AVERAGE_MOOD = {3., 3.5, 4.}
+GOOD_MOOD = {5., 6.}
+
+MoodCondition = float | Container[float] | None
 
 
 @dataclass
 class Entry:
     full_date: datetime.datetime
-    mood: int
+    mood: float
     activities: set
     note: str
 
@@ -41,7 +45,7 @@ class Entry:
         return (True if not incl_act else bool(incl_act & self.activities)) and \
             (not excl_act & self.activities) and \
             (True if when is None else self.full_date.date() == when) and \
-            (True if mood is None else (mood == self.mood if isinstance(mood, int) else self.mood in mood))
+            (True if mood is None else (mood == self.mood if isinstance(mood, float) else self.mood in mood))
 
 
 class Dataset:
@@ -105,7 +109,10 @@ class Dataset:
         '''
         return sum(1 for e in self if e.check_condition(incl_act, excl_act, when, mood))
     
-    def avg_mood(self) -> float:
+    def mood(self) -> float:
+        '''
+        Get the average mood among all entries
+        '''
         return sum(e.mood for e in self)/len(self.entries)
     
     def activities(self) -> Counter[str]:
@@ -122,7 +129,14 @@ class Dataset:
         return [e.full_date for e in self]
 
     def head(self, n: int = 5) -> None:
+        '''
+        Prints the last n entries;
+        if n is not given, prints the last 5 entries;
+        if n == -1, prints all entries.
+        '''
         print(self)
+        if n == -1:
+            n = len(self.entries)
         for e in self.entries[:n]:
             print(e)
         if len(self.entries) > n:
@@ -131,5 +145,6 @@ class Dataset:
     def analyse(self, activity: str):
         df_with = self.sub(incl_act={activity})
         df_without = self.sub(excl_act={activity})
-        mood_with, mood_without = df_with.avg_mood(), df_without.avg_mood()
+        mood_with, mood_without = df_with.mood(), df_without.mood()
         #! add more code here
+        return mood_with, mood_without

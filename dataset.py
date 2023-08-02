@@ -5,6 +5,7 @@ import pathlib
 from collections import Counter
 from typing import Container, Iterator
 
+REMOVE = {'m', 'nail biting'}
 
 MOOD_VALUES = {'bad': 1., 'meh': 2., 'less ok': 2.5, 'ok': 3., 'alright': 3.5, 'good': 4., 'great': 5., 'awesome': 6.}
 DT_FORMAT = r"%Y-%m-%d %H:%M"
@@ -56,11 +57,14 @@ class Dataset:
             for row in reader:
                 self.entries.append(self._get_entry(row))
 
-    def __init__(self, *, csv_file_path: str | pathlib.Path | None = None, entries: list[Entry] | None = None) -> None:
+    def __init__(self, *, csv_file_path: str | pathlib.Path | None = None, entries: list[Entry] | None = None, remove: bool = False) -> None:
         if entries is not None:
             self.entries = entries
         elif csv_file_path is not None:
             self._from_csv_file(csv_file_path)
+            if remove:
+                for entr in self.entries:
+                    entr.activities -= REMOVE
             print(self)
         else:
             self.entries = []

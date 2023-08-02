@@ -2,3 +2,4 @@ data_*.csv
 __pycache__/
 .vscode/
 venv/
+other/

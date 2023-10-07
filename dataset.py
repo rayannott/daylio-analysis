@@ -2,8 +2,12 @@ import csv
 from dataclasses import dataclass
 import datetime
 import pathlib
-from collections import Counter
+from collections import Counter, defaultdict
 from typing import Container, Iterator
+
+import plotly.express as px
+import plotly.graph_objs as go
+
 
 REMOVE = {'m', 'nail biting'}
 
@@ -27,9 +31,6 @@ class Entry:
     def __repr__(self) -> str:
         return f'[{self.full_date.strftime(DT_FORMAT)}] {self.mood} {", ".join(self.activities)}'
 
-    def get_note(self) -> str:
-        return self.note
-    
     def check_condition(self, incl_act: set[str],
                    excl_act: set[str], 
                    when: datetime.date | None, 
@@ -87,8 +88,14 @@ class Dataset:
             full_date=datetime.datetime.strptime(datetime_str, DT_FORMAT),
             mood=MOOD_VALUES[row['mood']],
             activities=set(row['activities'].split(' | ')),
-            note=row['note']
+            note=row['note'].replace('<br>', '\n')
         )
+
+    def group_by_day(self) -> defaultdict[datetime.date, list[Entry]]:
+        dd = defaultdict(list)
+        for e in reversed(self.entries):
+            dd[e.full_date.date()].append(e)
+        return dd
     
     def sub(self, incl_act: set[str] = set(),
                    excl_act: set[str] = set(), 
@@ -146,9 +153,60 @@ class Dataset:
         if len(self.entries) > n:
             print('...')
     
-    def analyse(self, activity: str):
+    def mood_with_without(self, activity: str):
         df_with = self.sub(incl_act={activity})
         df_without = self.sub(excl_act={activity})
         mood_with, mood_without = df_with.mood(), df_without.mood()
         #! add more code here
         return mood_with, mood_without
+
+    def mood_graph(self):
+        dd = self.group_by_day()
+        days = list(dd.keys())
+        avg_moods, max_moods, min_moods = [], [], []
+        for day_entries in dd.values():
+            this_day_moods = [e.mood for e in day_entries]
+            avg_moods.append(sum(this_day_moods)/len(this_day_moods))
+            max_moods.append(max(this_day_moods))
+            min_moods.append(min(this_day_moods))
+
+        fig = go.Figure([
+            go.Scatter(
+                name='avg',
+                x=days,
+                y=avg_moods,
+                mode='lines',
+                line=dict(color='rgb(31, 119, 180)'),
+            ),
+            go.Scatter(
+                name='max',
+                x=days,
+                y=max_moods,
+                mode='lines',
+                marker=dict(color='#444'),
+                line=dict(width=0),
+                showlegend=False
+            ),
+            go.Scatter(
+                name='min',
+                x=days,
+                y=min_moods,
+                marker=dict(color='#444'),
+                line=dict(width=0),
+                mode='lines',
+                fillcolor='rgba(130, 130, 130, 0.45)',
+                fill='tonexty',
+                showlegend=False
+            )
+        ])
+        fig.update_layout(
+            xaxis_title='Date',
+            yaxis_title='Mood',
+            hovermode='x',
+            showlegend=False, 
+            template='plotly_dark'
+        )
+        fig.update_yaxes(
+            rangemode='tozero', 
+        )
+        fig.show()

@@ -175,7 +175,7 @@ class Dataset:
                 name='avg',
                 x=days,
                 y=avg_moods,
-                mode='lines',
+                mode='lines+markers',
                 line=dict(color='rgb(31, 119, 180)'),
             ),
             go.Scatter(

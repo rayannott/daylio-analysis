@@ -19,6 +19,7 @@ AVERAGE_MOOD = {3., 3.5, 4.}
 GOOD_MOOD = {5., 6.}
 
 MoodCondition = float | Container[float] | None
+NoteCondition = str | Iterator[str] | None
 
 
 @dataclass
@@ -34,7 +35,8 @@ class Entry:
     def check_condition(self, incl_act: set[str],
                    excl_act: set[str], 
                    when: datetime.date | None, 
-                   mood: MoodCondition) -> bool:
+                   mood: MoodCondition,
+                   note_contains: NoteCondition) -> bool:
         '''
         Checks if an entry (self) fulfils all of the following conditions:
             has an activity from incl_act
@@ -44,10 +46,15 @@ class Entry:
         '''
         if incl_act & excl_act:
             raise ValueError(f'Some activities are included and excluded at the same time:\n{incl_act=}\n{excl_act=}')
+        if note_contains is None: note_condition_result = True
+        else: 
+            note_condition_result = note_contains in self.note.lower() if isinstance(note_contains, str) else \
+                  any(el in self.note.lower() for el in note_contains)
         return (True if not incl_act else bool(incl_act & self.activities)) and \
             (not excl_act & self.activities) and \
             (True if when is None else self.full_date.date() == when) and \
-            (True if mood is None else (mood == self.mood if isinstance(mood, float) else self.mood in mood))
+            (True if mood is None else (mood == self.mood if isinstance(mood, float) else self.mood in mood)) and \
+             note_condition_result
 
 
 class Dataset:
@@ -100,14 +107,15 @@ class Dataset:
     def sub(self, incl_act: set[str] = set(),
                    excl_act: set[str] = set(), 
                    when: datetime.date | None = None, 
-                   mood: MoodCondition = None) -> 'Dataset':
+                   mood: MoodCondition = None,
+                   note_contains: NoteCondition = None) -> 'Dataset':
         '''
         Returns a new Dataset object which is a subset of self
         with the entries filtered according to the arguments
         '''
         filtered_entries = []
         for e in self:
-            if e.check_condition(incl_act, excl_act, when, mood):
+            if e.check_condition(incl_act, excl_act, when, mood, note_contains):
                 filtered_entries.append(e)
         return Dataset(entries=filtered_entries)
     

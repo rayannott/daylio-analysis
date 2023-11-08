@@ -20,6 +20,7 @@ GOOD_MOOD = {5., 6.}
 
 MoodCondition = float | Container[float] | None
 NoteCondition = str | Iterator[str] | None
+InclExclActivities = str | set[str]
 
 
 @dataclass
@@ -32,8 +33,8 @@ class Entry:
     def __repr__(self) -> str:
         return f'[{self.full_date.strftime(DT_FORMAT)}] {self.mood} {", ".join(self.activities)}'
 
-    def check_condition(self, incl_act: set[str],
-                   excl_act: set[str], 
+    def check_condition(self, incl_act: InclExclActivities,
+                   excl_act: InclExclActivities, 
                    when: datetime.date | None, 
                    mood: MoodCondition,
                    note_contains: NoteCondition) -> bool:
@@ -44,6 +45,8 @@ class Entry:
             is recorded on a particular day
             matches the mood (an exact value or a container of values)
         '''
+        if isinstance(incl_act, str): incl_act = {incl_act}
+        if isinstance(excl_act, str): excl_act = {excl_act}
         if incl_act & excl_act:
             raise ValueError(f'Some activities are included and excluded at the same time:\n{incl_act=}\n{excl_act=}')
         if note_contains is None: note_condition_result = True
@@ -104,8 +107,8 @@ class Dataset:
             dd[e.full_date.date()].append(e)
         return dd
     
-    def sub(self, incl_act: set[str] = set(),
-                   excl_act: set[str] = set(), 
+    def sub(self, incl_act: InclExclActivities = set(),
+                   excl_act: InclExclActivities = set(), 
                    when: datetime.date | None = None, 
                    mood: MoodCondition = None,
                    note_contains: NoteCondition = None) -> 'Dataset':
@@ -119,14 +122,15 @@ class Dataset:
                 filtered_entries.append(e)
         return Dataset(entries=filtered_entries)
     
-    def count(self, incl_act: set[str] = set(),
-                excl_act: set[str] = set(), 
+    def count(self, incl_act: InclExclActivities = set(),
+                excl_act: InclExclActivities = set(), 
                 when: datetime.date | None = None, 
-                mood: MoodCondition = None) -> int:
+                mood: MoodCondition = None,
+                note_contains: NoteCondition = None) -> int:
         '''
         Counts the number of entries that fulfil the conditions.
         '''
-        return sum(1 for e in self if e.check_condition(incl_act, excl_act, when, mood))
+        return sum(1 for e in self if e.check_condition(incl_act, excl_act, when, mood, note_contains))
     
     def mood(self) -> float:
         '''

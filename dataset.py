@@ -27,7 +27,7 @@ InclExclActivities = str | set[str]
 class Entry:
     full_date: datetime.datetime
     mood: float
-    activities: set
+    activities: set[str]
     note: str
 
     def __repr__(self) -> str:
@@ -171,6 +171,21 @@ class Dataset:
         mood_with, mood_without = df_with.mood(), df_without.mood()
         #! add more code here
         return mood_with, mood_without
+    
+    def complete_analysis(self) -> list[tuple[str, float, float, float, int]]:
+        '''
+        Analyse all activities that occur at least 10 times.
+        Return a list of tuples (activity, mood_with, mood_without, change, num_of_occurances), 
+            where `change` is the mood change.
+        '''
+        cnt = self.activities()
+        res = []
+        for act, num in cnt.items():
+            if num < 10: continue
+            mood_with, mood_without = self.mood_with_without(act)
+            res.append((act, mood_with, mood_without, (mood_with - mood_without)/mood_without, num))
+        res.sort(key=lambda x: x[3], reverse=True)
+        return res
 
     def mood_graph(self):
         dd = self.group_by_day()

@@ -35,7 +35,7 @@ class Entry:
 
     def check_condition(self, incl_act: InclExclActivities,
                    excl_act: InclExclActivities, 
-                   when: datetime.date | None, 
+                   when: datetime.date | str | None, 
                    mood: MoodCondition,
                    note_contains: NoteCondition) -> bool:
         '''
@@ -43,7 +43,13 @@ class Entry:
             has an activity from incl_act
             does not have an activity from excl_act
             is recorded on a particular day
-            matches the mood (an exact value or a container of values)
+            matches the mood (an exact value or a container of values).
+        
+        incl_act: a string or a set of strings
+        excl_act: a string or a set of strings
+        when: a datetime.date object or a string in the format dd.mm.yyyy
+        mood: a float or a container of floats
+        note_contains: a string or a container of strings
         '''
         if isinstance(incl_act, str): incl_act = {incl_act}
         if isinstance(excl_act, str): excl_act = {excl_act}
@@ -53,6 +59,8 @@ class Entry:
         else: 
             note_condition_result = note_contains in self.note.lower() if isinstance(note_contains, str) else \
                   any(el in self.note.lower() for el in note_contains)
+        if isinstance(when, str):
+            when = datetime.datetime.strptime(when, '%d.%m.%Y').date()
         return (True if not incl_act else bool(incl_act & self.activities)) and \
             (not excl_act & self.activities) and \
             (True if when is None else self.full_date.date() == when) and \

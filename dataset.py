@@ -12,7 +12,8 @@ import plotly.graph_objs as go
 REMOVE = {'m', 'nail biting'}
 
 MOOD_VALUES = {'bad': 1., 'meh': 2., 'less ok': 2.5, 'ok': 3., 'alright': 3.5, 'good': 4., 'great': 5., 'awesome': 6.}
-DT_FORMAT = r"%Y-%m-%d %H:%M"
+DT_FORMAT_READ = r"%Y-%m-%d %H:%M"
+DT_FORMAT_SHOW = r"%d.%m.%Y %H:%M"
 
 BAD_MOOD = {1., 2., 2.5}
 AVERAGE_MOOD = {3., 3.5, 4.}
@@ -31,7 +32,7 @@ class Entry:
     note: str
 
     def __repr__(self) -> str:
-        return f'[{self.full_date.strftime(DT_FORMAT)}] {self.mood} {", ".join(self.activities)}'
+        return f'[{self.full_date.strftime(DT_FORMAT_SHOW)}] {self.mood} {", ".join(self.activities)}'
 
     def check_condition(self, incl_act: InclExclActivities,
                    excl_act: InclExclActivities, 
@@ -103,7 +104,7 @@ class Dataset:
     def _get_entry(self, row: dict[str, str]) -> Entry:
         datetime_str = row['full_date'] + ' ' + row['time']
         return Entry(
-            full_date=datetime.datetime.strptime(datetime_str, DT_FORMAT),
+            full_date=datetime.datetime.strptime(datetime_str, DT_FORMAT_READ),
             mood=MOOD_VALUES[row['mood']],
             activities=set(row['activities'].split(' | ')),
             note=row['note'].replace('<br>', '\n')

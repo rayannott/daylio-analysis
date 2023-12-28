@@ -11,7 +11,18 @@ import plotly.graph_objs as go
 
 REMOVE = {'m', 'nail biting'}
 
-MOOD_VALUES = {'bad': 1., 'meh': 2., 'less ok': 2.5, 'ok': 3., 'alright': 3.5, 'good': 4., 'great': 5., 'awesome': 6.}
+MOOD_VALUES = {
+    'bad': 1., 
+    'meh': 2., 
+    'less ok': 2.5, 
+    'ok': 3., 
+    'alright': 3.5, 
+    'good': 4., 
+    'better': 4.5, 
+    'great': 5., 
+    'awesome': 6.
+}
+
 DT_FORMAT_READ = r"%Y-%m-%d %H:%M"
 DT_FORMAT_SHOW = r"%d.%m.%Y %H:%M"
 

@@ -38,6 +38,16 @@ class Entry:
     activities: set[str]
     note: str
 
+    @staticmethod
+    def from_dict(row: dict[str, str]) -> 'Entry':
+        datetime_str = row['full_date'] + ' ' + row['time']
+        return Entry(
+            full_date=datetime.datetime.strptime(datetime_str, DT_FORMAT_READ),
+            mood=MOOD_VALUES[row['mood']],
+            activities=set(row['activities'].split(' | ')) if row['activities'] else set(),
+            note=row['note'].replace('<br>', '\n')
+        )
+
     def __repr__(self) -> str:
         return f'[{self.full_date.strftime(DT_FORMAT_SHOW)}] {self.mood} {", ".join(self.activities)}'
 
@@ -89,7 +99,7 @@ class Dataset:
         with open(csv_file_path, 'r', encoding='utf-8-sig') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
-                self.entries.append(self._get_entry(row))
+                self.entries.append(Entry.from_dict(row))
 
     def __init__(self, 
             *, 
@@ -119,15 +129,6 @@ class Dataset:
     
     def __len__(self) -> int:
         return len(self.entries)
-    
-    def _get_entry(self, row: dict[str, str]) -> Entry:
-        datetime_str = row['full_date'] + ' ' + row['time']
-        return Entry(
-            full_date=datetime.datetime.strptime(datetime_str, DT_FORMAT_READ),
-            mood=MOOD_VALUES[row['mood']],
-            activities=set(row['activities'].split(' | ')),
-            note=row['note'].replace('<br>', '\n')
-        )
 
     @lru_cache(maxsize=None)
     def group_by_day(self) -> defaultdict[datetime.date, list[Entry]]:

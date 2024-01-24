@@ -1,4 +1,5 @@
 import csv, datetime, pathlib
+from functools import lru_cache
 from statistics import mean
 from dataclasses import dataclass
 from collections import Counter, defaultdict
@@ -124,6 +125,7 @@ class Dataset:
             note=row['note'].replace('<br>', '\n')
         )
 
+    @lru_cache(maxsize=None)
     def group_by_day(self) -> defaultdict[datetime.date, list[Entry]]:
         dd = defaultdict(list)
         for e in reversed(self.entries):

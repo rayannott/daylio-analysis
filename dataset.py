@@ -305,3 +305,25 @@ class Dataset:
                 ticktext=WEEKDAYS if what == 'weekday' else MONTHS
             )
         return fig
+
+    def note_length_plot(self, cap_length: int = -1) -> go.Figure:
+        """
+        Line plot of note lengths vs date.
+        cap_length: if not -1, then the length of each note is capped at this value,
+            i.e. if a note is longer than cap_length, its length is set to cap_length.
+        """
+        day_to_total_note_len = defaultdict(int)
+        for day, entries in self.group_by_day().items():
+            for entry in entries:
+                day_to_total_note_len[day] += len(entry.note) if cap_length == -1 else min(len(entry.note), cap_length)
+        
+        fig = px.line(
+            x=day_to_total_note_len.keys(),
+            y=day_to_total_note_len.values(),
+            labels={'x': 'Date', 'y': 'Total note length'},
+            title='Total note length'
+        )
+        fig.update_layout(
+            template='plotly_dark'
+        )
+        return fig

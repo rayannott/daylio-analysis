@@ -286,14 +286,20 @@ class Dataset:
             y=list(map(mean, mood_by.values())),
             color=list(map(len, mood_by.values())),
             color_continuous_scale='viridis',
-            labels={'x': what.title, 'y': 'Mood', 'color': 'Number of entries'},
+            labels={'x': what.title(), 'y': 'Mood', 'color': 'Number of entries'},
             title=f'Mood by {what}'
         )
         fig.update_layout(
             template='plotly_dark', 
             xaxis={'dtick': 1},
-            # margins
-            # margin=dict(l=0, r=0, t=0, b=0),
         )
-        # colorbar
+
+        WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        if what in {'weekday', 'month'}:
+            fig.update_xaxes(
+                tickmode='array',
+                tickvals=list(range(7)) if what == 'weekday' else list(range(1, 13)),
+                ticktext=WEEKDAYS if what == 'weekday' else MONTHS
+            )
         return fig

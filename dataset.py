@@ -96,7 +96,12 @@ class Dataset:
             for row in reader:
                 self.entries.append(self._get_entry(row))
 
-    def __init__(self, *, csv_file_path: str | pathlib.Path | None = None, entries: list[Entry] | None = None, remove: bool = False) -> None:
+    def __init__(self, 
+            *, 
+            csv_file_path: str | pathlib.Path | None = None, 
+            entries: list[Entry] | None = None, 
+            remove: bool = False
+        ) -> None:
         if entries is not None:
             self.entries = entries
         elif csv_file_path is not None:
@@ -189,7 +194,6 @@ class Dataset:
         df_with = self.sub(incl_act={activity})
         df_without = self.sub(excl_act={activity})
         mood_with, mood_without = df_with.mood(), df_without.mood()
-        #! add more code here
         return mood_with, mood_without
     
     def complete_analysis(self) -> list[tuple[str, float, float, float, int]]:

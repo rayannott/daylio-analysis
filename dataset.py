@@ -143,23 +143,10 @@ class Dataset:
         Returns a new Dataset object which is a subset of self
         with the entries filtered according to the arguments
         '''
-        filtered_entries = []
-        for e in self:
-            if e.check_condition(incl_act, excl_act, when, mood, note_contains):
-                filtered_entries.append(e)
-        return Dataset(entries=filtered_entries)
-    
-    def count(self, incl_act: InclExclActivities = set(),
-            excl_act: InclExclActivities = set(), 
-            when: datetime.date | None = None, 
-            mood: MoodCondition = None,
-            note_contains: NoteCondition = None
-        ) -> int:
-        '''
-        Counts the number of entries that fulfil the conditions.
-        '''
-        return sum(1 for e in self if e.check_condition(incl_act, excl_act, when, mood, note_contains))
-    
+        return Dataset(
+            entries=[e for e in self if e.check_condition(incl_act, excl_act, when, mood, note_contains, predicate)]
+        )
+
     def mood(self) -> float:
         '''
         Get the average mood among all entries

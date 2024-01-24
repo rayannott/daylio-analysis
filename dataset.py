@@ -33,6 +33,7 @@ GOOD_MOOD = {5., 6.}
 MoodCondition = float | set[float] | None
 NoteCondition = str | Iterator[str] | None
 InclExclActivities = str | set[str]
+EntryPredicate = Callable[['Entry'], bool]
 
 
 @dataclass
@@ -50,7 +51,8 @@ class Entry:
             excl_act: InclExclActivities, 
             when: datetime.date | str | None, 
             mood: MoodCondition,
-            note_contains: NoteCondition
+            note_contains: NoteCondition,
+            predicate: EntryPredicate | None
             ) -> bool:
         '''
         Checks if an entry (self) fulfils all of the following conditions:
@@ -65,6 +67,7 @@ class Entry:
         mood: a float or a container of floats
         note_contains: a string or a container of strings
         '''
+        if predicate is not None and not predicate(self): return False
         if isinstance(incl_act, str): incl_act = {incl_act}
         if isinstance(excl_act, str): excl_act = {excl_act}
         if incl_act & excl_act:
@@ -72,7 +75,7 @@ class Entry:
         if note_contains is None: note_condition_result = True
         else: 
             note_condition_result = note_contains in self.note.lower() if isinstance(note_contains, str) else \
-                  any(el in self.note.lower() for el in note_contains)
+                any(el in self.note.lower() for el in note_contains)
         if isinstance(when, str):
             when = datetime.datetime.strptime(when, '%d.%m.%Y').date()
         return (
@@ -80,7 +83,8 @@ class Entry:
             (not excl_act & self.activities) and
             (True if when is None else self.full_date.date() == when) and
             (True if mood is None else (self.mood in mood if isinstance(mood, set) else self.mood == mood)) and
-            note_condition_result
+            note_condition_result and
+            (True if predicate is None else predicate(self))
         )
 
 
@@ -137,7 +141,8 @@ class Dataset:
             excl_act: InclExclActivities = set(), 
             when: datetime.date | None = None, 
             mood: MoodCondition = None,
-            note_contains: NoteCondition = None
+            note_contains: NoteCondition = None,
+            predicate: EntryPredicate | None = None
         ) -> 'Dataset':
         '''
         Returns a new Dataset object which is a subset of self

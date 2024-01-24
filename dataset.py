@@ -1,4 +1,4 @@
-import csv, datetime, pathlib
+import csv, datetime, pathlib, json
 from functools import lru_cache
 from statistics import mean
 from dataclasses import dataclass
@@ -9,18 +9,13 @@ import plotly.express as px
 import plotly.graph_objs as go
 
 
-REMOVE = {'m', 'nail biting'}
+DATA_DIR = pathlib.Path('other', 'daylio-data')
+REMOVE: set[str] = set(json.load(open(pathlib.Path('other') / 'daylio-data' / 'to_remove.json', 'r', encoding='utf-8-sig')))
 
 MOOD_VALUES = {
-    'bad': 1., 
-    'meh': 2., 
-    'less ok': 2.5, 
-    'ok': 3., 
-    'alright': 3.5, 
-    'good': 4., 
-    'better': 4.5, 
-    'great': 5., 
-    'awesome': 6.
+    'bad': 1., 'meh': 2., 'less ok': 2.5, 
+    'ok': 3., 'alright': 3.5, 'good': 4., 
+    'better': 4.5, 'great': 5., 'awesome': 6.
 }
 
 DT_FORMAT_READ = r"%Y-%m-%d %H:%M"
@@ -190,11 +185,10 @@ class Dataset:
         if len(self.entries) > n:
             print('...')
     
-    def mood_with_without(self, activity: str):
+    def mood_with_without(self, activity: str) -> tuple[float, float]:
         df_with = self.sub(incl_act={activity})
         df_without = self.sub(excl_act={activity})
-        mood_with, mood_without = df_with.mood(), df_without.mood()
-        return mood_with, mood_without
+        return df_with.mood(), df_without.mood()
     
     def complete_analysis(self) -> list[tuple[str, float, float, float, int]]:
         '''

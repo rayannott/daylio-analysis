@@ -29,7 +29,7 @@ BAD_MOOD = {1., 2., 2.5}
 AVERAGE_MOOD = {3., 3.5, 4.}
 GOOD_MOOD = {5., 6.}
 
-MoodCondition = float | Container[float] | None
+MoodCondition = float | set[float] | None
 NoteCondition = str | Iterator[str] | None
 InclExclActivities = str | set[str]
 

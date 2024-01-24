@@ -1,9 +1,8 @@
-import csv
+import csv, datetime, pathlib
+from statistics import mean
 from dataclasses import dataclass
-import datetime
-import pathlib
 from collections import Counter, defaultdict
-from typing import Container, Iterator
+from typing import Callable, Iterator, Literal
 
 import plotly.express as px
 import plotly.graph_objs as go

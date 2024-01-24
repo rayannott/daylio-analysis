@@ -45,11 +45,13 @@ class Entry:
     def __repr__(self) -> str:
         return f'[{self.full_date.strftime(DT_FORMAT_SHOW)}] {self.mood} {", ".join(self.activities)}'
 
-    def check_condition(self, incl_act: InclExclActivities,
-                   excl_act: InclExclActivities, 
-                   when: datetime.date | str | None, 
-                   mood: MoodCondition,
-                   note_contains: NoteCondition) -> bool:
+    def check_condition(self, 
+            incl_act: InclExclActivities,
+            excl_act: InclExclActivities, 
+            when: datetime.date | str | None, 
+            mood: MoodCondition,
+            note_contains: NoteCondition
+            ) -> bool:
         '''
         Checks if an entry (self) fulfils all of the following conditions:
             has an activity from incl_act
@@ -73,11 +75,13 @@ class Entry:
                   any(el in self.note.lower() for el in note_contains)
         if isinstance(when, str):
             when = datetime.datetime.strptime(when, '%d.%m.%Y').date()
-        return (True if not incl_act else bool(incl_act & self.activities)) and \
-            (not excl_act & self.activities) and \
-            (True if when is None else self.full_date.date() == when) and \
-            (True if mood is None else (mood == self.mood if isinstance(mood, float) else self.mood in mood)) and \
-             note_condition_result
+        return (
+            (True if not incl_act else bool(incl_act & self.activities)) and
+            (not excl_act & self.activities) and
+            (True if when is None else self.full_date.date() == when) and
+            (True if mood is None else (self.mood in mood if isinstance(mood, set) else self.mood == mood)) and
+            note_condition_result
+        )
 
 
 class Dataset:
@@ -127,11 +131,13 @@ class Dataset:
             dd[e.full_date.date()].append(e)
         return dd
     
-    def sub(self, incl_act: InclExclActivities = set(),
-                   excl_act: InclExclActivities = set(), 
-                   when: datetime.date | None = None, 
-                   mood: MoodCondition = None,
-                   note_contains: NoteCondition = None) -> 'Dataset':
+    def sub(self, 
+            incl_act: InclExclActivities = set(),
+            excl_act: InclExclActivities = set(), 
+            when: datetime.date | None = None, 
+            mood: MoodCondition = None,
+            note_contains: NoteCondition = None
+        ) -> 'Dataset':
         '''
         Returns a new Dataset object which is a subset of self
         with the entries filtered according to the arguments
@@ -143,10 +149,11 @@ class Dataset:
         return Dataset(entries=filtered_entries)
     
     def count(self, incl_act: InclExclActivities = set(),
-                excl_act: InclExclActivities = set(), 
-                when: datetime.date | None = None, 
-                mood: MoodCondition = None,
-                note_contains: NoteCondition = None) -> int:
+            excl_act: InclExclActivities = set(), 
+            when: datetime.date | None = None, 
+            mood: MoodCondition = None,
+            note_contains: NoteCondition = None
+        ) -> int:
         '''
         Counts the number of entries that fulfil the conditions.
         '''

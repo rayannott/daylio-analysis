@@ -263,3 +263,37 @@ class Dataset:
             rangemode='tozero', 
         )
         return fig
+
+    def by_time_bar_plot(self, what: Literal['weekday', 'hour', 'day', 'month']) -> go.Figure:
+        """
+        Groups entries by weekday, hour or day and plots a bar chart.
+        The color of the bars represents the number of entries,
+        the height of the bars represents the average mood.
+        """
+        FUNC_MAP: dict[str, Callable[[datetime.datetime], int]] = {
+            'weekday': datetime.datetime.weekday, 
+            'hour': lambda x: x.hour, 
+            'day': lambda x: x.day,
+            'month': lambda x: x.month
+        }
+
+        mood_by: defaultdict[int, list[float]] = defaultdict(list)
+        for entry in self:
+            mood_by[FUNC_MAP[what](entry.full_date)].append(entry.mood)
+
+        fig = px.bar(
+            x=mood_by.keys(),
+            y=list(map(mean, mood_by.values())),
+            color=list(map(len, mood_by.values())),
+            color_continuous_scale='viridis',
+            labels={'x': what.title, 'y': 'Mood', 'color': 'Number of entries'},
+            title=f'Mood by {what}'
+        )
+        fig.update_layout(
+            template='plotly_dark', 
+            xaxis={'dtick': 1},
+            # margins
+            # margin=dict(l=0, r=0, t=0, b=0),
+        )
+        # colorbar
+        return fig

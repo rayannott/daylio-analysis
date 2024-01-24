@@ -213,7 +213,7 @@ class Dataset:
         res.sort(key=lambda x: x[3], reverse=True)
         return res
 
-    def mood_graph(self):
+    def mood_plot(self) -> go.Figure:
         dd = self.group_by_day()
         days = list(dd.keys())
         avg_moods, max_moods, min_moods = [], [], []
@@ -262,4 +262,4 @@ class Dataset:
         fig.update_yaxes(
             rangemode='tozero', 
         )
-        fig.show()
+        return fig

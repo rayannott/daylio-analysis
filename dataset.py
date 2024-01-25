@@ -279,11 +279,17 @@ class Dataset:
         )
         return fig
 
-    def by_time_bar_plot(self, what: Literal['weekday', 'hour', 'day', 'month']) -> go.Figure:
+    def by_time_bar_plot(self,
+            what: Literal['weekday', 'hour', 'day', 'month'],
+            swap_freq_mood: bool = False
+        ) -> go.Figure:
         """
         Groups entries by weekday, hour or day and plots a bar chart.
         The color of the bars represents the number of entries,
         the height of the bars represents the average mood.
+
+        what: 'weekday', 'hour', 'day' or 'month' - what to group by
+        swap_freq_mood: if True, the frequency and mood will be swapped in the bar chart
         """
         FUNC_MAP: dict[str, Callable[[datetime.datetime], int]] = {
             'weekday': datetime.datetime.weekday, 
@@ -295,13 +301,18 @@ class Dataset:
         mood_by: defaultdict[int, list[float]] = defaultdict(list)
         for entry in self:
             mood_by[FUNC_MAP[what](entry.full_date)].append(entry.mood)
-
+        AVG_MOOD = list(map(mean, mood_by.values()))
+        FREQ = list(map(len, mood_by.values()))
         fig = px.bar(
             x=mood_by.keys(),
-            y=list(map(mean, mood_by.values())),
-            color=list(map(len, mood_by.values())),
+            y=AVG_MOOD if not swap_freq_mood else FREQ,
+            color=FREQ if not swap_freq_mood else AVG_MOOD,
             color_continuous_scale='viridis',
-            labels={'x': what.title(), 'y': 'Mood', 'color': 'Number of entries'},
+            labels={
+                'x': what.title(), 
+                'y': 'Mood' if not swap_freq_mood else 'Number of entries', 
+                'color': 'Number of entries' if not swap_freq_mood else 'Mood'
+            },
             title=f'Mood by {what}'
         )
         fig.update_layout(

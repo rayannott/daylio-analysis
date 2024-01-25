@@ -9,6 +9,7 @@ from typing import Callable, Iterator, Literal
 import plotly.express as px
 import plotly.graph_objs as go
 
+from utils import datetime_from_now, WEEKDAYS, MONTHS
 
 DATA_DIR = pathlib.Path('other', 'daylio-data')
 REMOVE: set[str] = set(json.load(open(pathlib.Path('other') / 'daylio-data' / 'to_remove.json', 'r', encoding='utf-8-sig')))
@@ -26,9 +27,6 @@ DATE_FORMAT_SHOW = r"%d.%m.%Y"
 BAD_MOOD = {1., 2., 2.5}
 AVERAGE_MOOD = {3., 3.5, 4.}
 GOOD_MOOD = {5., 6.}
-
-WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 MoodCondition = float | set[float] | None
 NoteCondition = str | Iterator[str] | None

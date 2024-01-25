@@ -130,8 +130,9 @@ class Dataset:
             self.entries = []
     
     def __repr__(self) -> str:
-        # TODO: change this
-        return f'Dataset({len(self.entries)} entries)'
+        if not self.entries: return 'Dataset(0 entries)'
+        latest_entry = self.entries[0].full_date
+        return f'Dataset({len(self.entries)} entries; last [{datetime_from_now(latest_entry)}]; average mood: {self.mood():.3f})'
 
     def __getitem__(self, _date_str: str) -> list[Entry] | Entry:
         """

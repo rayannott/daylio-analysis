@@ -320,8 +320,6 @@ class Dataset:
             xaxis={'dtick': 1},
         )
 
-        WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         if what in {'weekday', 'month'}:
             fig.update_xaxes(
                 tickmode='array',

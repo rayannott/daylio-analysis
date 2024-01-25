@@ -20,10 +20,14 @@ MOOD_VALUES = {
 
 DT_FORMAT_READ = r"%Y-%m-%d %H:%M"
 DT_FORMAT_SHOW = r"%d.%m.%Y %H:%M"
+DATE_FORMAT_SHOW = r"%d.%m.%Y"
 
 BAD_MOOD = {1., 2., 2.5}
 AVERAGE_MOOD = {3., 3.5, 4.}
 GOOD_MOOD = {5., 6.}
+
+WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 MoodCondition = float | set[float] | None
 NoteCondition = str | Iterator[str] | None
@@ -59,7 +63,7 @@ class Entry:
             note_contains: NoteCondition,
             predicate: EntryPredicate | None
             ) -> bool:
-        '''
+        """
         Checks if an entry (self) fulfils all of the following conditions:
             has an activity from incl_act
             does not have an activity from excl_act
@@ -71,18 +75,21 @@ class Entry:
         when: a datetime.date object or a string in the format dd.mm.yyyy
         mood: a float or a container of floats
         note_contains: a string or a container of strings
-        '''
+        """
         if predicate is not None and not predicate(self): return False
         if isinstance(incl_act, str): incl_act = {incl_act}
         if isinstance(excl_act, str): excl_act = {excl_act}
         if incl_act & excl_act:
             raise ValueError(f'Some activities are included and excluded at the same time:\n{incl_act=}\n{excl_act=}')
-        if note_contains is None: note_condition_result = True
-        else: 
-            note_condition_result = note_contains in self.note.lower() if isinstance(note_contains, str) else \
-                any(el in self.note.lower() for el in note_contains)
+        note_condition_result = (
+            True 
+            if note_contains is None else
+            note_contains in self.note.lower() 
+            if isinstance(note_contains, str) else 
+            any(el in self.note.lower() for el in note_contains)
+        )
         if isinstance(when, str):
-            when = datetime.datetime.strptime(when, '%d.%m.%Y').date()
+            when = datetime.datetime.strptime(when, DATE_FORMAT_SHOW).date()
         return (
             (True if not incl_act else bool(incl_act & self.activities)) and
             (not excl_act & self.activities) and
@@ -105,7 +112,7 @@ class Dataset:
             *, 
             csv_file_path: str | pathlib.Path | None = None, 
             entries: list[Entry] | None = None, 
-            remove: bool = False
+            remove: bool = True
         ) -> None:
         if entries is not None:
             self.entries = entries
@@ -119,19 +126,33 @@ class Dataset:
             self.entries = []
     
     def __repr__(self) -> str:
+        # TODO: change this
         return f'Dataset({len(self.entries)} entries)'
 
-    def __getitem__(self, idx: int) -> Entry:
-        return self.entries[idx]
+    def __str__(self) -> str:
+        # TODO: implement
+        ...
+
+    def __getitem__(self, _date_str: str) -> list[Entry]:
+        return self.group_by_day().get(datetime.datetime.strptime(_date_str, DATE_FORMAT_SHOW).date(), [])
     
     def __iter__(self) -> Iterator[Entry]:
         return iter(self.entries)
+
+    def __call__(self, arg):
+        # TODO: implement??
+        pass
     
     def __len__(self) -> int:
         return len(self.entries)
 
     @lru_cache(maxsize=None)
     def group_by_day(self) -> defaultdict[datetime.date, list[Entry]]:
+        """
+        Returns a defaultdict of entries grouped by day with 
+        the keys as datetime.date objects, the values are lists of Entry objects.
+        The entries are sorted by date in ascending order.
+        """
         dd = defaultdict(list)
         for e in reversed(self.entries):
             dd[e.full_date.date()].append(e)
@@ -145,25 +166,25 @@ class Dataset:
             note_contains: NoteCondition = None,
             predicate: EntryPredicate | None = None
         ) -> 'Dataset':
-        '''
+        """
         Returns a new Dataset object which is a subset of self
         with the entries filtered according to the arguments
-        '''
+        """
         return Dataset(
             entries=[e for e in self if e.check_condition(incl_act, excl_act, when, mood, note_contains, predicate)]
         )
 
     def mood(self) -> float:
-        '''
+        """
         Get the average mood among all entries
-        '''
+        """
         return sum(e.mood for e in self)/len(self.entries)
     
     def activities(self) -> Counter[str]:
-        '''
+        """
         Returns a Counter object for all activities in the dataset.
         Use `self.activities().keys()` to get only the set of all activities.
-        '''
+        """
         c = Counter()
         for e in self:
             c.update(e.activities)
@@ -173,11 +194,12 @@ class Dataset:
         return [e.full_date for e in self]
 
     def head(self, n: int = 5) -> None:
-        '''
+        """
         Prints the last n entries;
         if n is not given, prints the last 5 entries;
         if n == -1, prints all entries.
-        '''
+        """
+        # TODO: change this?
         print(self)
         if n == -1:
             n = len(self.entries)
@@ -192,11 +214,11 @@ class Dataset:
         return df_with.mood(), df_without.mood()
     
     def complete_analysis(self) -> list[tuple[str, float, float, float, int]]:
-        '''
+        """
         Analyse all activities that occur at least 10 times.
         Return a list of tuples (activity, mood_with, mood_without, change, num_of_occurances), 
             where `change` is the mood change.
-        '''
+        """
         cnt = self.activities()
         res = []
         for act, num in cnt.items():

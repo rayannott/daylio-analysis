@@ -133,11 +133,17 @@ class Dataset:
         # TODO: change this
         return f'Dataset({len(self.entries)} entries)'
 
-    def __str__(self) -> str:
-        # TODO: implement
-        ...
-
-    def __getitem__(self, _date_str: str) -> list[Entry]:
+    def __getitem__(self, _date_str: str) -> list[Entry] | Entry:
+        """
+        Return a list of entries for a particular day or an entry for a particular datetime.
+        Thus, _date_str can be either a string in the format dd.mm.yyyy or dd.mm.yyyy hh:mm
+        """
+        if len(_date_str) == 16:
+            datetime_ = datetime.datetime.strptime(_date_str, r'%d.%m.%Y %H:%M')
+            for entry in self.entries:
+                if entry.full_date == datetime_:
+                    return entry
+            raise ValueError(f'No entry for {_date_str}')
         return self.group_by_day().get(datetime.datetime.strptime(_date_str, DATE_FORMAT_SHOW).date(), [])
     
     def __iter__(self) -> Iterator[Entry]:

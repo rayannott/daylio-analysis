@@ -184,12 +184,14 @@ class Dataset:
             entries=[e for e in self if e.check_condition(incl_act, excl_act, when, mood, note_contains, predicate)]
         )
 
+    @lru_cache
     def mood(self) -> float:
         """
         Get the average mood among all entries
         """
         return sum(e.mood for e in self)/len(self.entries)
     
+    @lru_cache
     def activities(self) -> Counter[str]:
         """
         Returns a Counter object for all activities in the dataset.
@@ -200,6 +202,7 @@ class Dataset:
             c.update(e.activities)
         return c
     
+    @lru_cache
     def get_datetimes(self) -> list[datetime.datetime]:
         return [e.full_date for e in self]
 
@@ -230,6 +233,7 @@ class Dataset:
         df_without = self.sub(excl_act={activity})
         return df_with.mood(), df_without.mood()
     
+    @lru_cache
     def complete_analysis(self) -> list[tuple[str, float, float, float, int]]:
         """
         Analyse all activities that occur at least 10 times.

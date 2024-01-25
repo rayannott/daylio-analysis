@@ -230,8 +230,8 @@ class Dataset:
             print('...', file=file)
     
     def mood_with_without(self, activity: str) -> tuple[float, float]:
-        df_with = self.sub(incl_act={activity})
-        df_without = self.sub(excl_act={activity})
+        df_with = self.sub(incl_act=activity)
+        df_without = self.sub(excl_act=activity)
         return df_with.mood(), df_without.mood()
     
     @lru_cache
@@ -256,7 +256,7 @@ class Dataset:
         avg_moods, max_moods, min_moods = [], [], []
         for day_entries in dd.values():
             this_day_moods = [e.mood for e in day_entries]
-            avg_moods.append(sum(this_day_moods)/len(this_day_moods))
+            avg_moods.append(mean(this_day_moods))
             max_moods.append(max(this_day_moods))
             min_moods.append(min(this_day_moods))
 
@@ -352,20 +352,22 @@ class Dataset:
 
     def note_length_plot(self, cap_length: int = -1) -> go.Figure:
         """
-        Line plot of note lengths vs date.
+        Line plot of average note lengths vs date.
         cap_length: if not -1, then the length of each note is capped at this value,
             i.e. if a note is longer than cap_length, its length is set to cap_length.
         """
-        day_to_total_note_len = defaultdict(int)
+        day_to_total_note_len = defaultdict(float)
         for day, entries in self.group_by_day().items():
+            tmp = []
             for entry in entries:
-                day_to_total_note_len[day] += len(entry.note) if cap_length == -1 else min(len(entry.note), cap_length)
+                tmp.append(len(entry.note) if cap_length == -1 else min(len(entry.note), cap_length))
+            day_to_total_note_len[day] = mean(tmp)
         
         fig = px.line(
             x=day_to_total_note_len.keys(),
             y=day_to_total_note_len.values(),
-            labels={'x': 'Date', 'y': 'Total note length'},
-            title='Total note length'
+            labels={'x': 'Date', 'y': 'Average note length'},
+            title='Average note length'
         )
         fig.update_layout(
             template='plotly_dark'

@@ -265,6 +265,13 @@ class Dataset:
                 name='avg',
                 x=days,
                 y=avg_moods,
+                # color depends on how many entries there are on that day
+                marker=dict(
+                    color=[len(day) for day in dd.values()],
+                    colorscale='Bluered',
+                    showscale=True,
+                    colorbar=dict(title='Number of entries')
+                ),
                 mode='lines+markers',
                 line=dict(color='rgb(31, 119, 180)'),
             ),

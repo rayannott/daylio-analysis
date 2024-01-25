@@ -1,4 +1,5 @@
 import csv, datetime, pathlib, json
+from io import TextIOWrapper
 from functools import lru_cache
 from statistics import mean
 from dataclasses import dataclass
@@ -54,6 +55,9 @@ class Entry:
 
     def __repr__(self) -> str:
         return f'[{self.full_date.strftime(DT_FORMAT_SHOW)}] {self.mood} {", ".join(self.activities)}'
+    
+    def verbose(self) -> str:
+        return f'[{self.full_date.strftime(DT_FORMAT_SHOW)}] {self.mood} {", ".join(self.activities)}\n\t{self.note}'
 
     def check_condition(self, 
             incl_act: InclExclActivities,
@@ -193,20 +197,27 @@ class Dataset:
     def get_datetimes(self) -> list[datetime.datetime]:
         return [e.full_date for e in self]
 
-    def head(self, n: int = 5) -> None:
+    def head(self, 
+            n: int = 5, 
+            file: TextIOWrapper | None = None,
+            verbose: bool = False
+        ) -> None:
         """
-        Prints the last n entries;
+        Prints the last n entries (from newest to oldest);
         if n is not given, prints the last 5 entries;
         if n == -1, prints all entries.
+
+        n: number of the last entries (from newest to oldest) to print; if -1, prints all entries; default: 5
+        file: a file-like object to print to; by default, prints to stdout
+        verbose: if True, prints the entries in a more verbose format (including the note)
         """
-        # TODO: change this?
-        print(self)
+        print(self, file=file)
         if n == -1:
             n = len(self.entries)
         for e in self.entries[:n]:
-            print(e)
+            print(e if not verbose else e.verbose(), file=file)
         if len(self.entries) > n:
-            print('...')
+            print('...', file=file)
     
     def mood_with_without(self, activity: str) -> tuple[float, float]:
         df_with = self.sub(incl_act={activity})

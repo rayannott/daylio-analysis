@@ -11,8 +11,7 @@ import plotly.graph_objs as go
 
 from utils import datetime_from_now, WEEKDAYS, MONTHS
 
-DATA_DIR = pathlib.Path('other', 'daylio-data')
-REMOVE: set[str] = set(json.load(open(pathlib.Path('other') / 'daylio-data' / 'to_remove.json', 'r', encoding='utf-8-sig')))
+REMOVE: set[str] = set(json.load(open(pathlib.Path('data') / 'to_remove.json', 'r', encoding='utf-8-sig')))
 
 MOOD_VALUES = {
     'bad': 1., 'meh': 2., 'less ok': 2.5, 

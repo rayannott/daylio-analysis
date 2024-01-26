@@ -253,7 +253,15 @@ class Dataset:
         res.sort(key=lambda x: x[3], reverse=True)
         return res
 
+    # plots:
+
     def mood_plot(self) -> go.Figure:
+        """
+        Generates a plot of the average, maximum, and minimum moods over time.
+        (the area between the maximum and minimum moods is filled)
+
+        Returns: go.Figure: The plotly figure object representing the mood plot.
+        """
         dd = self.group_by_day()
         days = list(dd.keys())
         avg_moods, max_moods, min_moods = [], [], []
@@ -316,12 +324,14 @@ class Dataset:
             swap_freq_mood: bool = False
         ) -> go.Figure:
         """
-        Groups entries by weekday, hour or day and plots a bar chart.
+        Groups entries by weekday, hour or day and returns a bar chart.
         The color of the bars represents the number of entries,
         the height of the bars represents the average mood.
 
         what: 'weekday', 'hour', 'day' or 'month' - what to group by
         swap_freq_mood: if True, the frequency and mood will be swapped in the bar chart
+
+        Returns: go.Figure: The plotly figure object representing the bar chart.
         """
         FUNC_MAP: dict[str, Callable[[datetime.datetime], int]] = {
             'weekday': datetime.datetime.weekday, 
@@ -362,9 +372,15 @@ class Dataset:
 
     def note_length_plot(self, cap_length: int = -1) -> go.Figure:
         """
-        Line plot of average note lengths vs date.
-        cap_length: if not -1, then the length of each note is capped at this value,
-            i.e. if a note is longer than cap_length, its length is set to cap_length.
+        Generates a line plot showing the average note lengths vs date.
+
+        Args:
+            cap_length (int, optional): If not -1, the length of each note is capped at this value.
+                If a note is longer than cap_length, its length is set to cap_length. Default is -1.
+
+        Returns:
+            go.Figure: A plotly figure object representing the line plot.
+
         """
         day_to_total_note_len = defaultdict(float)
         for day, entries in self.group_by_day().items():

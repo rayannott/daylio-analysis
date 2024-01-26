@@ -115,11 +115,15 @@ class Dataset:
     def __init__(self, 
             *, 
             csv_file_path: str | pathlib.Path | None = None, 
-            entries: list[Entry] | None = None, 
-            remove: bool = True
+            remove: bool = True,
+            _entries: list[Entry] | None = None, # note: entries might as well have been a tuple
         ) -> None:
-        if entries is not None:
-            self.entries = entries
+        """
+        Construct a Dataset object from a CSV file (preferred).
+        Construction using a list of entries should be used only within the class.
+        """
+        if _entries is not None:
+            self.entries = _entries
         elif csv_file_path is not None:
             self._from_csv_file(csv_file_path)
             if remove:
@@ -185,7 +189,7 @@ class Dataset:
         with the entries filtered according to the arguments
         """
         return Dataset(
-            entries=[e for e in self if e.check_condition(incl_act, excl_act, when, mood, note_contains, predicate)]
+            _entries=[e for e in self if e.check_condition(incl_act, excl_act, when, mood, note_contains, predicate)]
         )
 
     @lru_cache

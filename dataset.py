@@ -1,4 +1,4 @@
-import csv, datetime, pathlib, json
+import csv, datetime, pathlib, json, re
 from io import TextIOWrapper
 from functools import lru_cache
 from statistics import mean
@@ -19,10 +19,6 @@ MOOD_VALUES = {
     'better': 4.5, 'great': 5., 'awesome': 6.
 }
 
-DT_FORMAT_READ = r"%Y-%m-%d %H:%M"
-DT_FORMAT_SHOW = r"%d.%m.%Y %H:%M"
-DATE_FORMAT_SHOW = r"%d.%m.%Y"
-
 BAD_MOOD = {1., 2., 2.5}
 AVERAGE_MOOD = {3., 3.5, 4.}
 GOOD_MOOD = {5., 6.}
@@ -31,6 +27,13 @@ MoodCondition = float | set[float] | None
 NoteCondition = str | Iterator[str] | None
 InclExclActivities = str | set[str]
 EntryPredicate = Callable[['Entry'], bool]
+
+DT_FORMAT_READ = r"%Y-%m-%d %H:%M"
+DT_FORMAT_SHOW = r"%d.%m.%Y %H:%M"
+DATE_FORMAT_SHOW = r"%d.%m.%Y"
+
+DATE_PATTERN = re.compile(r'\d{2}\.\d{2}\.\d{4}')
+DATETIME_PATTERN = re.compile(r'\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}')
 
 
 @dataclass
@@ -134,16 +137,19 @@ class Dataset:
     def __getitem__(self, _date_str: str) -> list[Entry] | Entry:
         """
         Return a list of entries for a particular day or an entry for a particular datetime.
-        Thus, _date_str can be either a string in the format dd.mm.yyyy or dd.mm.yyyy hh:mm
+        Thus, _date_str can be either a string in the format dd.mm.yyyy or dd.mm.yyyy HH:MM.
         """
-        if len(_date_str) == 16:
-            datetime_ = datetime.datetime.strptime(_date_str, r'%d.%m.%Y %H:%M')
+        if DATE_PATTERN.fullmatch(_date_str):
+            return self.group_by_day().get(datetime.datetime.strptime(_date_str, DATE_FORMAT_SHOW).date(), [])
+        elif DATETIME_PATTERN.fullmatch(_date_str):
+            datetime_ = datetime.datetime.strptime(_date_str, DT_FORMAT_SHOW)
             for entry in self.entries:
                 if entry.full_date == datetime_:
                     return entry
             raise ValueError(f'No entry for {_date_str}')
-        return self.group_by_day().get(datetime.datetime.strptime(_date_str, DATE_FORMAT_SHOW).date(), [])
-    
+        else:
+            raise ValueError(f'Invalid date string: {_date_str}; expected format: dd.mm.yyyy or dd.mm.yyyy HH:MM')
+
     def __iter__(self) -> Iterator[Entry]:
         return iter(self.entries)
 

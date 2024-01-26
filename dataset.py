@@ -45,6 +45,7 @@ class Entry:
 
     @staticmethod
     def from_dict(row: dict[str, str]) -> 'Entry':
+        """Construct an Entry object from a dictionary with the keys as in the CSV file."""
         datetime_str = row['full_date'] + ' ' + row['time']
         return Entry(
             full_date=datetime.datetime.strptime(datetime_str, DT_FORMAT_READ),
@@ -57,7 +58,7 @@ class Entry:
         return f'[{self.full_date.strftime(DT_FORMAT_SHOW)}] {self.mood} {", ".join(self.activities)}'
     
     def verbose(self) -> str:
-        return f'[{self.full_date.strftime(DT_FORMAT_SHOW)}] {self.mood} {", ".join(self.activities)}\n\t{self.note}'
+        return f'{repr(self)}\n\t{self.note}'
 
     def check_condition(self, 
             incl_act: InclExclActivities,

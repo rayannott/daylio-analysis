@@ -9,7 +9,7 @@ from typing import Callable, Iterator, Literal
 import plotly.express as px
 import plotly.graph_objs as go
 
-from utils import datetime_from_now, WEEKDAYS, MONTHS
+from utils import datetime_from_now, WEEKDAYS, MONTHS, StatsResult
 
 REMOVE: set[str] = set(json.load(open(pathlib.Path('data') / 'to_remove.json', 'r', encoding='utf-8-sig')))
 
@@ -34,23 +34,6 @@ DATE_FORMAT_SHOW = r"%d.%m.%Y"
 
 DATE_PATTERN = re.compile(r'\d{2}\.\d{2}\.\d{4}')
 DATETIME_PATTERN = re.compile(r'\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}')
-
-
-@dataclass
-class StatsResult:
-    mood: tuple[float, float]
-    note_length: tuple[float, float]
-    entries_frequency: float
-
-    def __repr__(self) -> str:
-        FORMAT = '{}: {:.3f} ± {:.3f}{}'
-
-        additional = f' (once every {1/self.entries_frequency:.2f} days)' if self.entries_frequency < 1. else ''
-        return '\n'.join([
-            FORMAT.format('Mood', *self.mood, ''),
-            FORMAT.format('Note length', *self.note_length, ' symbols'),
-            f'Entries frequency: {self.entries_frequency:.3f} entries per day{additional}'
-        ])
 
 
 @dataclass

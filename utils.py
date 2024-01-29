@@ -1,9 +1,27 @@
 import datetime
 from itertools import dropwhile
+from dataclasses import dataclass
 
 
 WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+
+@dataclass
+class StatsResult:
+    mood: tuple[float, float]
+    note_length: tuple[float, float]
+    entries_frequency: float
+
+    def __repr__(self) -> str:
+        FORMAT = '{}: {:.3f} ± {:.3f}{}'
+
+        additional = f' (once every {1/self.entries_frequency:.2f} days)' if self.entries_frequency < 1. else ''
+        return '\n'.join([
+            FORMAT.format('Mood', *self.mood, ''),
+            FORMAT.format('Note length', *self.note_length, ' symbols'),
+            f'Entries frequency: {self.entries_frequency:.3f} entries per day{additional}'
+        ])
 
 
 def datetime_from_now(dt: datetime.datetime) -> str:

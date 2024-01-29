@@ -85,7 +85,7 @@ class Entry:
         if isinstance(incl_act, str): incl_act = {incl_act}
         if isinstance(excl_act, str): excl_act = {excl_act}
         if incl_act & excl_act:
-            raise ValueError(f'Some activities are included and excluded at the same time:\n{incl_act=}\n{excl_act=}')
+            raise ValueError(f'Some activities are included and excluded at the same time: {incl_act=}; {excl_act=}')
         note_condition_result = (
             True 
             if note_contains is None else
@@ -180,14 +180,21 @@ class Dataset:
     def sub(self, 
             incl_act: InclExclActivities = set(),
             excl_act: InclExclActivities = set(), 
-            when: datetime.date | None = None, 
+            when: datetime.date | str | None = None, 
             mood: MoodCondition = None,
             note_contains: NoteCondition = None,
             predicate: EntryPredicate | None = None
         ) -> 'Dataset':
         """
         Returns a new Dataset object which is a subset of self
-        with the entries filtered according to the arguments
+        with the entries filtered according to the arguments.
+        
+        incl_act: a string or a set of strings - only entries with at least one of these activities will be included
+        excl_act: a string or a set of strings - only entries without any of these activities will be included
+        when: a datetime.date object or a string in the format dd.mm.yyyy - only entries on this day will be included
+        mood: a float or a set of floats - only entries with these moods will be included
+        note_contains: a string or an iterator of strings - only entries with notes containing this string (one of these strings) will be included
+        predicate: a function that takes an Entry object and returns a bool - only entries for which this function returns True will be included
         """
         return Dataset(
             _entries=[e for e in self if e.check_condition(incl_act, excl_act, when, mood, note_contains, predicate)]

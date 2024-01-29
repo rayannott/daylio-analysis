@@ -1,7 +1,7 @@
 import csv, datetime, pathlib, json, re
 from io import TextIOWrapper
 from functools import lru_cache
-from statistics import mean
+from statistics import mean, stdev, median
 from dataclasses import dataclass
 from collections import Counter, defaultdict
 from typing import Callable, Iterator, Literal
@@ -34,6 +34,23 @@ DATE_FORMAT_SHOW = r"%d.%m.%Y"
 
 DATE_PATTERN = re.compile(r'\d{2}\.\d{2}\.\d{4}')
 DATETIME_PATTERN = re.compile(r'\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}')
+
+
+@dataclass
+class StatsResult:
+    mood: tuple[float, float]
+    note_length: tuple[float, float]
+    entries_frequency: float
+
+    def __repr__(self) -> str:
+        FORMAT = '{}: {:.3f} ± {:.3f}{}'
+
+        additional = f' (once every {1/self.entries_frequency:.2f} days)' if self.entries_frequency < 1. else ''
+        return '\n'.join([
+            FORMAT.format('Mood', *self.mood, ''),
+            FORMAT.format('Note length', *self.note_length, ' symbols'),
+            f'Entries frequency: {self.entries_frequency:.3f} entries per day{additional}'
+        ])
 
 
 @dataclass
@@ -241,6 +258,24 @@ class Dataset:
         df_with = self.sub(incl_act=activity)
         df_without = self.sub(excl_act=activity)
         return df_with.mood(), df_without.mood()
+    
+    def stats(self) -> StatsResult:
+        """
+        Returns the following statistics:
+            - mood (avg ± std)
+            - note length [num symbols] (avg ± std)
+            - entries frequency [entries per day] (median)
+        as a StatsResult object.
+        """
+        moods = [e.mood for e in self]
+        note_lengths = [len(e.note) for e in self]
+        timedeltas = [max(1., (d1 - d2).total_seconds()) for d1, d2 in zip(self.get_datetimes()[:-1], self.get_datetimes()[1:])]
+        freqs = [24 * 60 * 60 / td for td in timedeltas]
+        return StatsResult(
+            mood=(mean(moods), stdev(moods)),
+            note_length=(mean(note_lengths), stdev(note_lengths)),
+            entries_frequency=median(freqs)
+        )
     
     @lru_cache
     def complete_analysis(self) -> list[tuple[str, float, float, float, int]]:

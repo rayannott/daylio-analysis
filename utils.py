@@ -16,6 +16,11 @@ class CompleteAnalysisNT(NamedTuple):
     num_of_occurances: int
 
 
+class MoodWithWithoutNT(NamedTuple):
+    mood_with: float
+    mood_without: float
+
+
 @dataclass
 class StatsResult:
     mood: tuple[float, float]

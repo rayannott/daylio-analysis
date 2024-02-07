@@ -9,7 +9,7 @@ from typing import Callable, Iterator, Literal
 import plotly.express as px
 import plotly.graph_objs as go
 
-from utils import datetime_from_now, WEEKDAYS, MONTHS, StatsResult
+from utils import datetime_from_now, WEEKDAYS, MONTHS, StatsResult, CompleteAnalysisNT, MoodWithWithoutNT
 
 REMOVE: set[str] = set(json.load(open(pathlib.Path('data') / 'to_remove.json', 'r', encoding='utf-8-sig')))
 
@@ -80,6 +80,7 @@ class Entry:
         when: a datetime.date object or a string in the format dd.mm.yyyy
         mood: a float or a container of floats
         note_contains: a string or a container of strings
+        predicate: a function that takes an Entry object and returns a bool
         """
         if predicate is not None and not predicate(self): return False
         if isinstance(incl_act, str): incl_act = {incl_act}
@@ -120,8 +121,8 @@ class Dataset:
             _entries: list[Entry] | None = None, # note: entries might as well have been a tuple
         ) -> None:
         """
-        Construct a Dataset object from a CSV file (preferred).
-        Construction using a list of entries should be used only within the class.
+        Construct a Dataset object from a CSV file.
+        Construction using a list of entries is used within the class.
         """
         if _entries is not None:
             self.entries = _entries
@@ -132,7 +133,7 @@ class Dataset:
                     entr.activities -= REMOVE
             print(self)
         else:
-            self.entries = []
+            raise ValueError('Either a CSV file path or a list of entries must be provided')
     
     def __repr__(self) -> str:
         if not self.entries: return 'Dataset(0 entries)'
@@ -244,10 +245,10 @@ class Dataset:
         if len(self.entries) > n:
             print('...', file=file)
     
-    def mood_with_without(self, activity: str) -> tuple[float, float]:
+    def mood_with_without(self, activity: str) -> MoodWithWithoutNT:
         df_with = self.sub(incl_act=activity)
         df_without = self.sub(excl_act=activity)
-        return df_with.mood(), df_without.mood()
+        return MoodWithWithoutNT(df_with.mood(), df_without.mood())
     
     def stats(self) -> StatsResult:
         """
@@ -259,8 +260,8 @@ class Dataset:
         """
         moods = [e.mood for e in self]
         note_lengths = [len(e.note) for e in self]
-        timedeltas = [max(1., (d1 - d2).total_seconds()) for d1, d2 in zip(self.get_datetimes()[:-1], self.get_datetimes()[1:])]
-        freqs = [24 * 60 * 60 / td for td in timedeltas]
+        timedeltas_secs = [max(1., (d1 - d2).total_seconds()) for d1, d2 in zip(self.get_datetimes()[:-1], self.get_datetimes()[1:])]
+        freqs = [24 * 60 * 60 / td for td in timedeltas_secs]
         return StatsResult(
             mood=(mean(moods), stdev(moods)),
             note_length=(mean(note_lengths), stdev(note_lengths)),
@@ -268,20 +269,22 @@ class Dataset:
         )
     
     @lru_cache
-    def complete_analysis(self) -> list[tuple[str, float, float, float, int]]:
+    def complete_analysis(self) -> list[CompleteAnalysisNT]:
         """
         Analyse all activities that occur at least 10 times.
-        Return a list of tuples (activity, mood_with, mood_without, change, num_of_occurances), 
+        Return a list of typed namedtuples
+        (activity, mood_with, mood_without, change, num_of_occurances), 
             where `change` is the mood change.
         """
         cnt = self.activities()
-        res = []
+        res: list[CompleteAnalysisNT] = []
         for act, num in cnt.items():
             if num < 10: continue
             mood_with, mood_without = self.mood_with_without(act)
-            res.append((act, mood_with, mood_without, (mood_with - mood_without)/mood_without, num))
-        res.sort(key=lambda x: x[3], reverse=True)
+            res.append(CompleteAnalysisNT(act, mood_with, mood_without, (mood_with - mood_without)/mood_without, num))
+        res.sort(key=lambda x: x.change, reverse=True)
         return res
+
 
     # plots:
 

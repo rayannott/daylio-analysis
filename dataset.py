@@ -120,8 +120,8 @@ class Dataset:
             _entries: list[Entry] | None = None, # note: entries might as well have been a tuple
         ) -> None:
         """
-        Construct a Dataset object from a CSV file (preferred).
-        Construction using a list of entries should be used only within the class.
+        Construct a Dataset object from a CSV file.
+        Construction using a list of entries is used within the class.
         """
         if _entries is not None:
             self.entries = _entries
@@ -132,7 +132,7 @@ class Dataset:
                     entr.activities -= REMOVE
             print(self)
         else:
-            self.entries = []
+            raise ValueError('Either a CSV file path or a list of entries must be provided')
     
     def __repr__(self) -> str:
         if not self.entries: return 'Dataset(0 entries)'

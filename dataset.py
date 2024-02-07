@@ -259,8 +259,8 @@ class Dataset:
         """
         moods = [e.mood for e in self]
         note_lengths = [len(e.note) for e in self]
-        timedeltas = [max(1., (d1 - d2).total_seconds()) for d1, d2 in zip(self.get_datetimes()[:-1], self.get_datetimes()[1:])]
-        freqs = [24 * 60 * 60 / td for td in timedeltas]
+        timedeltas_secs = [max(1., (d1 - d2).total_seconds()) for d1, d2 in zip(self.get_datetimes()[:-1], self.get_datetimes()[1:])]
+        freqs = [24 * 60 * 60 / td for td in timedeltas_secs]
         return StatsResult(
             mood=(mean(moods), stdev(moods)),
             note_length=(mean(note_lengths), stdev(note_lengths)),

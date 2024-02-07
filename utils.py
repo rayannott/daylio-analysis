@@ -24,12 +24,11 @@ class StatsResult:
 
     def __repr__(self) -> str:
         FORMAT = '{}: {:.3f} ± {:.3f}{}'
-
-        additional = f' (once every {1/self.entries_frequency:.2f} days)' if self.entries_frequency < 1. else ''
+        median_timedelta = datetime.timedelta(days=1/self.entries_frequency)
         return '\n'.join([
             FORMAT.format('Mood', *self.mood, ''),
             FORMAT.format('Note length', *self.note_length, ' symbols'),
-            f'Entries frequency: {self.entries_frequency:.3f} entries per day{additional}'
+            f'Entries frequency: {self.entries_frequency:.3f} entries per day (once every {timedelta_for_humans(median_timedelta)})'
         ])
 
 
@@ -37,6 +36,11 @@ def datetime_from_now(dt: datetime.datetime) -> str:
     """Returns a string saying how long ago the datetime object is."""
     now = datetime.datetime.now()
     diff = now - dt
+    res = timedelta_for_humans(diff)
+    return (res + ' ago') if res else 'just now'
+
+
+def timedelta_for_humans(diff: datetime.timedelta) -> str:
     years = diff.days // 365; diff -= datetime.timedelta(days=years*365)
     months = diff.days // 30; diff -= datetime.timedelta(days=months*30)
     days = diff.days; diff -= datetime.timedelta(days=days)
@@ -47,4 +51,4 @@ def datetime_from_now(dt: datetime.datetime) -> str:
     res = ''
     for value, word in dropwhile(lambda x: x[0] == 0, zip(values, words)):
         res += f'{value} {word}{"s" if value > 1 else ""} '
-    return res + 'ago' if res else 'just now'
+    return res.strip()

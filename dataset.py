@@ -80,6 +80,7 @@ class Entry:
         when: a datetime.date object or a string in the format dd.mm.yyyy
         mood: a float or a container of floats
         note_contains: a string or a container of strings
+        predicate: a function that takes an Entry object and returns a bool
         """
         if predicate is not None and not predicate(self): return False
         if isinstance(incl_act, str): incl_act = {incl_act}

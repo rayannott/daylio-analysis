@@ -9,7 +9,7 @@ from typing import Callable, Iterator, Literal
 import plotly.express as px
 import plotly.graph_objs as go
 
-from utils import datetime_from_now, WEEKDAYS, MONTHS, StatsResult
+from utils import datetime_from_now, WEEKDAYS, MONTHS, StatsResult, CompleteAnalysisNT
 
 REMOVE: set[str] = set(json.load(open(pathlib.Path('data') / 'to_remove.json', 'r', encoding='utf-8-sig')))
 
@@ -268,19 +268,20 @@ class Dataset:
         )
     
     @lru_cache
-    def complete_analysis(self) -> list[tuple[str, float, float, float, int]]:
+    def complete_analysis(self) -> list[CompleteAnalysisNT]:
         """
         Analyse all activities that occur at least 10 times.
-        Return a list of tuples (activity, mood_with, mood_without, change, num_of_occurances), 
+        Return a list of typed namedtuples
+        (activity, mood_with, mood_without, change, num_of_occurances), 
             where `change` is the mood change.
         """
         cnt = self.activities()
-        res = []
+        res: list[CompleteAnalysisNT] = []
         for act, num in cnt.items():
             if num < 10: continue
             mood_with, mood_without = self.mood_with_without(act)
-            res.append((act, mood_with, mood_without, (mood_with - mood_without)/mood_without, num))
-        res.sort(key=lambda x: x[3], reverse=True)
+            res.append(CompleteAnalysisNT(act, mood_with, mood_without, (mood_with - mood_without)/mood_without, num))
+        res.sort(key=lambda x: x.change, reverse=True)
         return res
 
     # plots:

@@ -1,10 +1,19 @@
 import datetime
 from itertools import dropwhile
 from dataclasses import dataclass
+from typing import NamedTuple
 
 
 WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+
+class CompleteAnalysisNT(NamedTuple):
+    activity: str
+    mood_with: float
+    mood_without: float
+    change: float
+    num_of_occurances: int
 
 
 @dataclass

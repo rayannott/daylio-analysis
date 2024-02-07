@@ -284,6 +284,12 @@ class Dataset:
         res.sort(key=lambda x: x.change, reverse=True)
         return res
 
+    def split_before_after(self, datetime: datetime.datetime) -> tuple['Dataset', 'Dataset']:
+        """
+        Split the dataset into two datasets: before and after the given date.
+        """
+        # TODO: do I need this?
+
     # plots:
 
     def mood_plot(self) -> go.Figure:

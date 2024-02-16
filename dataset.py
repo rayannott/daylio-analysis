@@ -1,5 +1,6 @@
 import csv, datetime, pathlib, json, re
 from io import TextIOWrapper
+from itertools import groupby
 from functools import lru_cache
 from statistics import mean, stdev, median
 from dataclasses import dataclass
@@ -166,17 +167,14 @@ class Dataset:
     def __len__(self) -> int:
         return len(self.entries)
 
-    @lru_cache(maxsize=None)
-    def group_by_day(self) -> defaultdict[datetime.date, list[Entry]]:
+    @lru_cache
+    def group_by_day(self) -> dict[datetime.date, list[Entry]]:
         """
-        Returns a defaultdict of entries grouped by day with 
+        Returns a dict of entries grouped by day with 
         the keys as datetime.date objects, the values are lists of Entry objects.
         The entries are sorted by date in ascending order.
         """
-        dd = defaultdict(list)
-        for e in reversed(self.entries):
-            dd[e.full_date.date()].append(e)
-        return dd
+        return {day: list(entries) for day, entries in groupby(reversed(self.entries), key=lambda x: x.full_date.date())}
     
     def sub(self, 
             incl_act: InclExclActivities = set(),

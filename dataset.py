@@ -195,6 +195,13 @@ class Dataset:
         note_contains: a string or an iterator of strings - only entries with notes containing this string (one of these strings) will be included
         predicate: a function that takes an Entry object and returns a bool - only entries for which this function returns True will be included
         """
+        all_activities_set = self.activities().keys()
+        if isinstance(incl_act, str): incl_act = {incl_act}
+        if isinstance(excl_act, str): excl_act = {excl_act}
+        if incl_act - all_activities_set:
+            raise ValueError(f'Unknown activities: {incl_act - all_activities_set}')
+        if excl_act - all_activities_set:
+            raise ValueError(f'Unknown activities: {excl_act - all_activities_set}')
         return Dataset(
             _entries=[e for e in self if e.check_condition(incl_act, excl_act, when, mood, note_contains, predicate)]
         )

@@ -141,21 +141,17 @@ class Dataset:
         latest_entry = self.entries[0].full_date
         return f'Dataset({len(self.entries)} entries; last [{datetime_from_now(latest_entry)}]; average mood: {self.mood():.3f})'
 
-    def __getitem__(self, _date_str: str) -> list[Entry] | Entry:
+    def __getitem__(self, _date: str | slice) -> list[Entry]:
         """
-        Return a list of entries for a particular day or an entry for a particular datetime.
-        Thus, _date_str can be either a string in the format dd.mm.yyyy or dd.mm.yyyy HH:MM.
+        Return a list of entries for a particular day.
+        Thus, _date_str is a string in the format dd.mm.yyyy.
         """
-        if DATE_PATTERN.fullmatch(_date_str):
-            return self.group_by_day().get(datetime.datetime.strptime(_date_str, DATE_FORMAT_SHOW).date(), [])
-        elif DATETIME_PATTERN.fullmatch(_date_str):
-            datetime_ = datetime.datetime.strptime(_date_str, DT_FORMAT_SHOW)
-            for entry in self.entries:
-                if entry.full_date == datetime_:
-                    return entry
-            raise ValueError(f'No entry for {_date_str}')
-        else:
-            raise ValueError(f'Invalid date string: {_date_str}; expected format: dd.mm.yyyy or dd.mm.yyyy HH:MM')
+        if isinstance(_date, slice):
+            check_date = datetime_slice_to_entry_predicate(_date)
+            return [e for e in self.entries if check_date(e)]
+        if DATE_PATTERN.fullmatch(_date):
+            return self.group_by_day().get(datetime.datetime.strptime(_date, DATE_FORMAT_SHOW).date(), [])
+        raise ValueError('Invalid date format: use dd.mm.yyyy')
 
     def __iter__(self) -> Iterator[Entry]:
         return iter(self.entries)
@@ -166,6 +162,23 @@ class Dataset:
     
     def __len__(self) -> int:
         return len(self.entries)
+    
+    def at(self, datetime_str: str) -> Entry:
+        """
+        Returns the entry for a particular datetime.
+
+        datetime_str: a string in the format dd.mm.yyyy HH:MM
+
+        Raises:
+            ValueError: if the date string is invalid or there is no entry for this date
+        """
+        if DATETIME_PATTERN.fullmatch(datetime_str):
+            datetime_ = datetime.datetime.strptime(datetime_str, DT_FORMAT_SHOW)
+            for entry in self.entries:
+                if entry.full_date == datetime_:
+                    return entry
+            raise ValueError(f'No entry for {datetime_str}')
+        raise ValueError(f'Invalid date string: {datetime_str}; expected format: dd.mm.yyyy or dd.mm.yyyy HH:MM')
 
     @lru_cache
     def group_by_day(self) -> dict[datetime.date, list[Entry]]:

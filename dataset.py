@@ -37,6 +37,20 @@ DATE_PATTERN = re.compile(r'\d{2}\.\d{2}\.\d{4}')
 DATETIME_PATTERN = re.compile(r'\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}')
 
 
+def date_slice_to_entry_predicate(_slice: slice) -> EntryPredicate:
+    if not (_slice.start or _slice.stop):
+        raise ValueError('At least one of the slice bounds must be given')
+    if _slice.step is not None: print('[Warning]: step is not supported yet')
+    _date_start = datetime.datetime.strptime(_slice.start, DATE_FORMAT_SHOW) if _slice.start else None
+    _date_stop = datetime.datetime.strptime(_slice.stop, DATE_FORMAT_SHOW) if _slice.stop else None
+    def check_date(entry: Entry) -> bool:
+        return (
+            (True if _date_start is None else entry.full_date >= _date_start) and
+            (True if _date_stop is None else entry.full_date < _date_stop)
+        )
+    return check_date
+
+
 @dataclass
 class Entry:
     full_date: datetime.datetime
@@ -99,7 +113,7 @@ class Entry:
             when = datetime.datetime.strptime(when, DATE_FORMAT_SHOW).date()
         when_condition_result = (True if when is None else self.full_date.date() == when)
         if isinstance(when, slice):
-            when_condition_result = datetime_slice_to_entry_predicate(when)(self)
+            when_condition_result = date_slice_to_entry_predicate(when)(self)
         return (
             (True if not incl_act else bool(incl_act & self.activities)) and
             (not excl_act & self.activities) and
@@ -150,7 +164,7 @@ class Dataset:
         Thus, _date_str is a string in the format dd.mm.yyyy.
         """
         if isinstance(_date, slice):
-            check_date = datetime_slice_to_entry_predicate(_date)
+            check_date = date_slice_to_entry_predicate(_date)
             return [e for e in self.entries if check_date(e)]
         if DATE_PATTERN.fullmatch(_date):
             return self.group_by_day().get(datetime.datetime.strptime(_date, DATE_FORMAT_SHOW).date(), [])

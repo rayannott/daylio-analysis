@@ -64,7 +64,7 @@ class Entry:
     def check_condition(self, 
             incl_act: InclExclActivities,
             excl_act: InclExclActivities, 
-            when: datetime.date | str | None, 
+            when: datetime.date | str | slice | None, 
             mood: MoodCondition,
             note_contains: NoteCondition,
             predicate: EntryPredicate | None
@@ -78,7 +78,7 @@ class Entry:
         
         incl_act: a string or a set of strings
         excl_act: a string or a set of strings
-        when: a datetime.date object or a string in the format dd.mm.yyyy
+        when: a datetime.date object, a string in the format dd.mm.yyyy or a slice of strings in the format dd.mm.yyyy
         mood: a float or a container of floats
         note_contains: a string or a container of strings
         predicate: a function that takes an Entry object and returns a bool
@@ -97,10 +97,13 @@ class Entry:
         )
         if isinstance(when, str):
             when = datetime.datetime.strptime(when, DATE_FORMAT_SHOW).date()
+        when_condition_result = (True if when is None else self.full_date.date() == when)
+        if isinstance(when, slice):
+            when_condition_result = datetime_slice_to_entry_predicate(when)(self)
         return (
             (True if not incl_act else bool(incl_act & self.activities)) and
             (not excl_act & self.activities) and
-            (True if when is None else self.full_date.date() == when) and
+            when_condition_result and
             (True if mood is None else (self.mood in mood if isinstance(mood, set) else self.mood == mood)) and
             note_condition_result and
             (True if predicate is None else predicate(self))

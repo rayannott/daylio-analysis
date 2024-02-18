@@ -173,9 +173,8 @@ class Dataset:
     def __iter__(self) -> Iterator[Entry]:
         return iter(self.entries)
 
-    def __call__(self, arg):
-        # TODO: implement??
-        pass
+    def __call__(self, datetime_str: str) -> Entry:
+        return self.at(datetime_str)
     
     def __len__(self) -> int:
         return len(self.entries)
@@ -209,7 +208,7 @@ class Dataset:
     def sub(self, 
             incl_act: InclExclActivities = set(),
             excl_act: InclExclActivities = set(), 
-            when: datetime.date | str | None = None, 
+            when: datetime.date | str | slice | None = None,
             mood: MoodCondition = None,
             note_contains: NoteCondition = None,
             predicate: EntryPredicate | None = None

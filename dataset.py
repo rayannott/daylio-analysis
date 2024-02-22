@@ -156,13 +156,14 @@ class Dataset:
     
     def __repr__(self) -> str:
         if not self.entries: return 'Dataset(0 entries)'
-        latest_entry = self.entries[0].full_date
-        return f'Dataset({len(self.entries)} entries; last [{datetime_from_now(latest_entry)}]; average mood: {self.mood():.3f})'
+        latest_entry_full_date = self.entries[0].full_date
+        return f'Dataset({len(self.entries)} entries; last [{datetime_from_now(latest_entry_full_date)}]; average mood: {self.mood():.3f})'
 
     def __getitem__(self, _date: str | slice) -> list[Entry]:
         """
         Return a list of entries for a particular day.
-        Thus, _date_str is a string in the format dd.mm.yyyy.
+        The entries are sorted by time in ascending order.
+        Thus, _date is a string in the format dd.mm.yyyy.
         """
         if isinstance(_date, slice):
             check_date = date_slice_to_entry_predicate(_date)

@@ -77,8 +77,8 @@ class Entry:
         print(f'{self}\n{P[0]}{self.note}{P[1]}')
 
     def check_condition(self, 
-            incl_act: InclExclActivities,
-            excl_act: InclExclActivities, 
+            include: InclExclActivities,
+            exclude: InclExclActivities, 
             when: datetime.date | str | slice | None, 
             mood: MoodCondition,
             note_contains: NoteCondition,
@@ -86,23 +86,23 @@ class Entry:
             ) -> bool:
         """
         Checks if an entry (self) fulfils all of the following conditions:
-            has an activity from incl_act
-            does not have an activity from excl_act
-            is recorded on a particular day
+            has an activity from include
+            does not have an activity from exclude
+            is recorded on a particular day (or a range of days)
             matches the mood (an exact value or a container of values).
         
-        incl_act: a string or a set of strings
-        excl_act: a string or a set of strings
+        include: a string or a set of strings
+        exclude: a string or a set of strings
         when: a datetime.date object, a string in the format dd.mm.yyyy or a slice of strings in the format dd.mm.yyyy
         mood: a float or a container of floats
         note_contains: a string or a container of strings
         predicate: a function that takes an Entry object and returns a bool
         """
         if predicate is not None and not predicate(self): return False
-        if isinstance(incl_act, str): incl_act = {incl_act}
-        if isinstance(excl_act, str): excl_act = {excl_act}
-        if incl_act & excl_act:
-            raise ValueError(f'Some activities are included and excluded at the same time: {incl_act=}; {excl_act=}')
+        if isinstance(include, str): include = {include}
+        if isinstance(exclude, str): exclude = {exclude}
+        if include & exclude:
+            raise ValueError(f'Some activities are included and excluded at the same time: {include=}; {exclude=}')
         note_condition_result = (
             True 
             if note_contains is None else
@@ -116,8 +116,8 @@ class Entry:
         if isinstance(when, slice):
             when_condition_result = date_slice_to_entry_predicate(when)(self)
         return (
-            (True if not incl_act else bool(incl_act & self.activities)) and
-            (not excl_act & self.activities) and
+            (True if not include else bool(include & self.activities)) and
+            (not exclude & self.activities) and
             when_condition_result and
             (True if mood is None else (self.mood in mood if isinstance(mood, set) else self.mood == mood)) and
             note_condition_result and
@@ -207,8 +207,8 @@ class Dataset:
         return {day: list(entries) for day, entries in groupby(reversed(self.entries), key=lambda x: x.full_date.date())}
     
     def sub(self, 
-            incl_act: InclExclActivities = set(),
-            excl_act: InclExclActivities = set(), 
+            include: InclExclActivities = set(),
+            exclude: InclExclActivities = set(), 
             when: datetime.date | str | slice | None = None,
             mood: MoodCondition = None,
             note_contains: NoteCondition = None,
@@ -218,22 +218,20 @@ class Dataset:
         Returns a new Dataset object which is a subset of self
         with the entries filtered according to the arguments.
         
-        incl_act: a string or a set of strings - only entries with at least one of these activities will be included
-        excl_act: a string or a set of strings - only entries without any of these activities will be included
-        when: a datetime.date object or a string in the format dd.mm.yyyy - only entries on this day will be included
+        include: a string or a set of strings - only entries with at least one of these activities will be included
+        exclude: a string or a set of strings - only entries without any of these activities will be included
+        when: a datetime.date object, a string in the format dd.mm.yyyy or a slice with strings of that format - only entries on this day will be included
         mood: a float or a set of floats - only entries with these moods will be included
         note_contains: a string or an iterator of strings - only entries with notes containing this string (one of these strings) will be included
         predicate: a function that takes an Entry object and returns a bool - only entries for which this function returns True will be included
         """
         all_activities_set = self.activities().keys()
-        if isinstance(incl_act, str): incl_act = {incl_act}
-        if isinstance(excl_act, str): excl_act = {excl_act}
-        if incl_act - all_activities_set:
-            raise ValueError(f'Unknown activities: {incl_act - all_activities_set}')
-        if excl_act - all_activities_set:
-            raise ValueError(f'Unknown activities: {excl_act - all_activities_set}')
+        if isinstance(include, str): include = {include}
+        if isinstance(exclude, str): exclude = {exclude}
+        if include - all_activities_set: raise ValueError(f'Unknown activities: {include - all_activities_set}')
+        if exclude - all_activities_set: raise ValueError(f'Unknown activities: {exclude - all_activities_set}')
         return Dataset(
-            _entries=[e for e in self if e.check_condition(incl_act, excl_act, when, mood, note_contains, predicate)]
+            _entries=[e for e in self if e.check_condition(include, exclude, when, mood, note_contains, predicate)]
         )
 
     @lru_cache
@@ -281,8 +279,8 @@ class Dataset:
             print('...', file=file)
     
     def mood_with_without(self, activity: str) -> MoodWithWithout:
-        df_with = self.sub(incl_act=activity)
-        df_without = self.sub(excl_act=activity)
+        df_with = self.sub(include=activity)
+        df_without = self.sub(exclude=activity)
         return MoodWithWithout(df_with.mood(), df_without.mood())
     
     def stats(self) -> StatsResult:

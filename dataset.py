@@ -73,7 +73,8 @@ class Entry:
         return f'[{self.full_date.strftime(DT_FORMAT_SHOW)}] {self.mood} {", ".join(self.activities)}'
     
     def verbose(self) -> None:
-        print(f'{self}\n\t{self.note}')
+        P = '{}'
+        print(f'{self}\n{P[0]}{self.note}{P[1]}')
 
     def check_condition(self, 
             incl_act: InclExclActivities,

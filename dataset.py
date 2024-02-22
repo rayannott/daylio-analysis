@@ -1,6 +1,6 @@
 import csv, datetime, pathlib, json, re
 from io import TextIOWrapper
-from itertools import groupby
+from itertools import groupby, islice
 from functools import lru_cache
 from statistics import mean, stdev, median
 from dataclasses import dataclass
@@ -274,7 +274,7 @@ class Dataset:
         print(self, file=file)
         if n == -1:
             n = len(self.entries)
-        for e in self.entries[:n]:
+        for e in islice(self, n):
             print(e if not verbose else e.verbose(), file=file)
         if len(self.entries) > n:
             print('...', file=file)

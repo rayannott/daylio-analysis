@@ -10,7 +10,7 @@ from typing import Callable, Iterator, Literal
 import plotly.express as px
 import plotly.graph_objs as go
 
-from utils import datetime_from_now, WEEKDAYS, MONTHS, StatsResult, CompleteAnalysisNT, MoodWithWithoutNT
+from utils import datetime_from_now, WEEKDAYS, MONTHS, StatsResult, CompleteAnalysisNT, MoodWithWithout
 
 REMOVE: set[str] = set(json.load(open(pathlib.Path('data') / 'to_remove.json', 'r', encoding='utf-8-sig')))
 
@@ -279,10 +279,10 @@ class Dataset:
         if len(self.entries) > n:
             print('...', file=file)
     
-    def mood_with_without(self, activity: str) -> MoodWithWithoutNT:
+    def mood_with_without(self, activity: str) -> MoodWithWithout:
         df_with = self.sub(incl_act=activity)
         df_without = self.sub(excl_act=activity)
-        return MoodWithWithoutNT(df_with.mood(), df_without.mood())
+        return MoodWithWithout(df_with.mood(), df_without.mood())
     
     def stats(self) -> StatsResult:
         """

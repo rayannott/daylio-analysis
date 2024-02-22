@@ -167,7 +167,7 @@ class Dataset:
         """
         if isinstance(_date, slice):
             check_date = date_slice_to_entry_predicate(_date)
-            return [e for e in self.entries if check_date(e)]
+            return [e for e in reversed(self.entries) if check_date(e)]
         if DATE_PATTERN.fullmatch(_date):
             return self.group_by_day().get(datetime.datetime.strptime(_date, DATE_FORMAT_SHOW).date(), [])
         raise ValueError('Invalid date format: use dd.mm.yyyy')

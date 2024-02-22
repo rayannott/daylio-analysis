@@ -49,10 +49,11 @@ def timedelta_for_humans(timedelta: datetime.timedelta) -> str:
     values = [years, months, days, hours, minutes, seconds]
     res = ''
     for value, word in dropwhile(lambda x: x[0] == 0, zip(values, words)):
-        res += f'{value} {word}{"s" if value > 1 else ""} '
-    return res + 'ago' if res else 'just now'
+        res += f'{value} {word}{"s" if value > 1 else ""} ' if value else ''
+    return res.strip()
 
 
 def datetime_from_now(dt: datetime.datetime) -> str:
     """Returns a string saying how long ago the datetime object is."""
-    return timedelta_for_humans(datetime.datetime.now() - dt)
+    res = timedelta_for_humans(datetime.datetime.now() - dt)
+    return res + ' ago' if res else 'just now'

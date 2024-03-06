@@ -157,7 +157,7 @@ class Dataset:
     def __repr__(self) -> str:
         if not self.entries: return 'Dataset(0 entries)'
         latest_entry_full_date = self.entries[0].full_date
-        return f'Dataset({len(self.entries)} entries; last [{datetime_from_now(latest_entry_full_date)}]; average mood: {self.mood():.3f})'
+        return f'Dataset({len(self.entries)} entries; last [{datetime_from_now(latest_entry_full_date)}]; mood: {self.mood():.3f} ± {self.mood_std():.3f}'
 
     def __getitem__(self, _date: str | slice) -> list[Entry]:
         """
@@ -240,7 +240,14 @@ class Dataset:
         """
         Get the average mood among all entries
         """
-        return sum(e.mood for e in self)/len(self.entries)
+        return mean(e.mood for e in self)
+
+    @lru_cache
+    def mood_std(self) -> float:
+        """
+        Get the standard deviation of the mood among all entries
+        """
+        return stdev(e.mood for e in self)
     
     @lru_cache
     def activities(self) -> Counter[str]:
@@ -303,9 +310,9 @@ class Dataset:
         )
     
     @lru_cache
-    def complete_analysis(self) -> list[CompleteAnalysisNT]:
+    def complete_analysis(self, n_threshold: int = 10) -> list[CompleteAnalysisNT]:
         """
-        Analyse all activities that occur at least 10 times.
+        Analyse all activities that occur at least (n_threshold) times.
         Return a list of typed namedtuples
         (activity, mood_with, mood_without, change, num_of_occurances), 
             where `change` is the mood change.
@@ -313,7 +320,7 @@ class Dataset:
         cnt = self.activities()
         res: list[CompleteAnalysisNT] = []
         for act, num in cnt.items():
-            if num < 10: continue
+            if num < n_threshold: continue
             mood_with, mood_without = self.mood_with_without(act)
             res.append(CompleteAnalysisNT(act, mood_with, mood_without, (mood_with - mood_without)/mood_without, num))
         res.sort(key=lambda x: x.change, reverse=True)

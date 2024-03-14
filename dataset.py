@@ -10,7 +10,7 @@ from typing import Callable, Iterator, Literal
 import plotly.express as px
 import plotly.graph_objs as go
 
-from utils import datetime_from_now, WEEKDAYS, MONTHS, StatsResult, CompleteAnalysisNT, MoodWithWithout
+from utils import datetime_from_now, WEEKDAYS, MONTHS, StatsResult, CompleteAnalysis, MoodWithWithout
 
 REMOVE: set[str] = set(json.load(open(pathlib.Path('data') / 'to_remove.json', 'r', encoding='utf-8-sig')))
 
@@ -311,7 +311,7 @@ class Dataset:
         )
     
     @lru_cache
-    def complete_analysis(self, n_threshold: int = 10) -> list[CompleteAnalysisNT]:
+    def complete_analysis(self, n_threshold: int = 10) -> list[CompleteAnalysis]:
         """
         Analyse all activities that occur at least (n_threshold) times.
         Return a list of typed namedtuples
@@ -319,11 +319,11 @@ class Dataset:
             where `change` is the mood change.
         """
         cnt = self.activities()
-        res: list[CompleteAnalysisNT] = []
+        res: list[CompleteAnalysis] = []
         for act, num in cnt.items():
             if num < n_threshold: continue
             mood_with, mood_without = self.mood_with_without(act)
-            res.append(CompleteAnalysisNT(act, mood_with, mood_without, (mood_with - mood_without)/mood_without, num))
+            res.append(CompleteAnalysis(act, mood_with, mood_without, (mood_with - mood_without)/mood_without, num))
         res.sort(key=lambda x: x.change, reverse=True)
         return res
 

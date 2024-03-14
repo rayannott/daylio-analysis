@@ -8,7 +8,7 @@ WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 
-class CompleteAnalysisNT(NamedTuple):
+class CompleteAnalysis(NamedTuple):
     activity: str
     mood_with: float
     mood_without: float

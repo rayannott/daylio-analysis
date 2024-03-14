@@ -286,6 +286,7 @@ class Dataset:
         if len(self.entries) > n:
             print('...', file=file)
     
+    @lru_cache
     def mood_with_without(self, activity: str) -> MoodWithWithout:
         df_with = self.sub(include=activity)
         df_without = self.sub(exclude=activity)

@@ -1,7 +1,7 @@
 import csv, datetime, pathlib, json, re
 from io import TextIOWrapper
 from itertools import groupby, islice
-from functools import lru_cache
+from functools import lru_cache, cache
 from statistics import mean, stdev, median
 from dataclasses import dataclass
 from collections import Counter, defaultdict
@@ -24,8 +24,8 @@ BAD_MOOD = {1., 2., 2.5}
 AVERAGE_MOOD = {3., 3.5, 4.}
 GOOD_MOOD = {5., 6.}
 
-MoodCondition = float | set[float] | None
-NoteCondition = str | Iterator[str] | None
+MoodCondition = float | set[float]
+NoteCondition = str | Iterator[str]
 InclExclActivities = str | set[str]
 EntryPredicate = Callable[['Entry'], bool]
 
@@ -79,9 +79,8 @@ class Entry:
     def check_condition(self, 
             include: InclExclActivities,
             exclude: InclExclActivities, 
-            when: datetime.date | str | slice | None, 
-            mood: MoodCondition,
-            note_contains: NoteCondition,
+            mood: MoodCondition | None,
+            note_contains: NoteCondition | None,
             predicate: EntryPredicate | None
             ) -> bool:
         """
@@ -93,7 +92,6 @@ class Entry:
         
         include: a string or a set of strings
         exclude: a string or a set of strings
-        when: a datetime.date object, a string in the format dd.mm.yyyy or a slice of strings in the format dd.mm.yyyy
         mood: a float or a container of floats
         note_contains: a string or a container of strings
         predicate: a function that takes an Entry object and returns a bool
@@ -110,15 +108,15 @@ class Entry:
             if isinstance(note_contains, str) else 
             any(el in self.note.lower() for el in note_contains)
         )
-        if isinstance(when, str):
-            when = datetime.datetime.strptime(when, DATE_FORMAT_SHOW).date()
-        when_condition_result = (True if when is None else self.full_date.date() == when)
-        if isinstance(when, slice):
-            when_condition_result = date_slice_to_entry_predicate(when)(self)
+        # if isinstance(when, str):
+        #     when = datetime.datetime.strptime(when, DATE_FORMAT_SHOW).date()
+        # when_condition_result = (True if when is None else self.full_date.date() == when)
+        # if isinstance(when, slice):
+        #     when_condition_result = date_slice_to_entry_predicate(when)(self)
         return (
             (True if not include else bool(include & self.activities)) and
             (not exclude & self.activities) and
-            when_condition_result and
+            # when_condition_result and
             (True if mood is None else (self.mood in mood if isinstance(mood, set) else self.mood == mood)) and
             note_condition_result and
             (True if predicate is None else predicate(self))
@@ -126,12 +124,14 @@ class Entry:
 
 
 class Dataset:
-    def _from_csv_file(self, csv_file_path: str | pathlib.Path):
-        self.entries: list[Entry] = []
+    @staticmethod
+    def _from_csv_file(csv_file_path: str | pathlib.Path):
+        entries: list[Entry] = []
         with open(csv_file_path, 'r', encoding='utf-8-sig') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
-                self.entries.append(Entry.from_dict(row))
+                entries.append(Entry.from_dict(row))
+        return entries
 
     def __init__(self, 
             *, 
@@ -146,7 +146,7 @@ class Dataset:
         if _entries is not None:
             self.entries = _entries
         elif csv_file_path is not None:
-            self._from_csv_file(csv_file_path)
+            self.entries = Dataset._from_csv_file(csv_file_path)
             if remove:
                 for entr in self.entries:
                     entr.activities -= REMOVE
@@ -157,62 +157,86 @@ class Dataset:
     def __repr__(self) -> str:
         if not self.entries: return 'Dataset(0 entries)'
         latest_entry_full_date = self.entries[0].full_date
-        return f'Dataset({len(self.entries)} entries; last [{datetime_from_now(latest_entry_full_date)}]; mood: {self.mood():.3f} ± {self.mood_std():.3f}'
+        return f'Dataset({len(self.entries)} entries; last [{datetime_from_now(latest_entry_full_date)}]; mood: {self.mood():.3f} ± {self.mood_std():.3f})'
 
-    def __getitem__(self, _date: str | slice) -> list[Entry]:
+    def __getitem__(self, _date: str | slice) -> 'Dataset':
+        """
+        Returns a new Dataset object which is a subset of self
+        with the entries filtered according to the date or date range as a slice.
+        """
+        if isinstance(_date, slice):
+            CHECK_FN = date_slice_to_entry_predicate(_date)
+        else:
+            date = datetime.datetime.strptime(_date, DATE_FORMAT_SHOW).date()
+            CHECK_FN: EntryPredicate = lambda e: e.full_date.date() == date
+        return Dataset(_entries=[e for e in self if CHECK_FN(e)])
+
+    def __iter__(self) -> Iterator[Entry]:
+        return iter(self.entries)
+
+    def __call__(self, _date: str) -> list[Entry]:
         """
         Return a list of entries for a particular day.
         The entries are sorted by time in ascending order.
         Thus, _date is a string in the format dd.mm.yyyy.
         """
-        if isinstance(_date, slice):
-            check_date = date_slice_to_entry_predicate(_date)
-            return [e for e in reversed(self.entries) if check_date(e)]
         if DATE_PATTERN.fullmatch(_date):
-            return self.group_by_day().get(datetime.datetime.strptime(_date, DATE_FORMAT_SHOW).date(), [])
+            return self.group_by('day').get(datetime.datetime.strptime(_date, DATE_FORMAT_SHOW).date(), [])
         raise ValueError('Invalid date format: use dd.mm.yyyy')
-
-    def __iter__(self) -> Iterator[Entry]:
-        return iter(self.entries)
-
-    def __call__(self, datetime_str: str) -> Entry:
+    
+    def __matmul__(self, datetime_str: str) -> Entry | None:
+        """
+        Wrapper for the `at` method.
+        """
         return self.at(datetime_str)
     
     def __len__(self) -> int:
         return len(self.entries)
-    
-    def at(self, datetime_str: str) -> Entry:
+
+    def people(self) -> dict[str, int]:
         """
-        Returns the entry for a particular datetime.
+        Returns a Counter-like dict of people and the number of times they appear in the dataset.
+        """
+        return {activity: num for activity, num in self.activities().items() if activity[0].isupper()}
+    
+    def at(self, datetime_str: str) -> Entry | None:
+        """
+        Returns the entry for a particular datetime or None if there is no such entry.
 
         datetime_str: a string in the format dd.mm.yyyy HH:MM
 
-        Raises:
-            ValueError: if the date string is invalid or there is no entry for this date
+        This is used when calling the Dataset object as a function.
         """
         if DATETIME_PATTERN.fullmatch(datetime_str):
             datetime_ = datetime.datetime.strptime(datetime_str, DT_FORMAT_SHOW)
             for entry in self.entries:
                 if entry.full_date == datetime_:
                     return entry
-            raise ValueError(f'No entry for {datetime_str}')
+            return None
         raise ValueError(f'Invalid date string: {datetime_str}; expected format: dd.mm.yyyy or dd.mm.yyyy HH:MM')
 
     @lru_cache
-    def group_by_day(self) -> dict[datetime.date, list[Entry]]:
+    def group_by(self,
+            what: Literal['day', 'month']
+        ) -> dict[datetime.date, list[Entry]]:
         """
-        Returns a dict of entries grouped by day with 
-        the keys as datetime.date objects, the values are lists of Entry objects.
+        Returns a dict of entries grouped by day with the keys as datetime.date objects, the values are lists of Entry objects.
+        
         The entries are sorted by date in ascending order.
         """
-        return {day: list(entries) for day, entries in groupby(reversed(self.entries), key=lambda x: x.full_date.date())}
+        KEYMAP: dict[str, Callable[[Entry], datetime.date | datetime.datetime]] = {
+            'day': lambda x: x.full_date.date(),
+            'month': lambda x: x.full_date.date().replace(day=1)
+        }
+        if what not in KEYMAP:
+            raise ValueError(f'Invalid value for "what": {what}; expected one of {list(KEYMAP.keys())}')
+        return {day: list(entries) for day, entries in groupby(reversed(self.entries), key=KEYMAP[what])}
     
     def sub(self, 
             include: InclExclActivities = set(),
             exclude: InclExclActivities = set(), 
-            when: datetime.date | str | slice | None = None,
-            mood: MoodCondition = None,
-            note_contains: NoteCondition = None,
+            mood: MoodCondition | None = None,
+            note_contains: NoteCondition | None = None,
             predicate: EntryPredicate | None = None
         ) -> 'Dataset':
         """
@@ -229,10 +253,10 @@ class Dataset:
         all_activities_set = self.activities().keys()
         if isinstance(include, str): include = {include}
         if isinstance(exclude, str): exclude = {exclude}
-        if include - all_activities_set: raise ValueError(f'Unknown activities: {include - all_activities_set}')
-        if exclude - all_activities_set: raise ValueError(f'Unknown activities: {exclude - all_activities_set}')
+        if ua:=(include - all_activities_set): raise ValueError(f'Unknown activities to include: {ua}')
+        if ua:=(exclude - all_activities_set): raise ValueError(f'Unknown activities to exclude: {ua}')
         return Dataset(
-            _entries=[e for e in self if e.check_condition(include, exclude, when, mood, note_contains, predicate)]
+            _entries=[e for e in self if e.check_condition(include, exclude, mood, note_contains, predicate)]
         )
 
     @lru_cache
@@ -330,15 +354,17 @@ class Dataset:
 
     # plots:
 
-    def mood_plot(self) -> go.Figure:
+    def mood_plot(self,
+            by: Literal['day', 'month'] = 'day'
+        ) -> go.Figure:
         """
         Generates a plot of the average, maximum, and minimum moods over time.
         (the area between the maximum and minimum moods is filled)
 
         Returns: go.Figure: The plotly figure object representing the mood plot.
         """
-        dd = self.group_by_day()
-        days = list(dd.keys())
+        dd = self.group_by(by)
+        groups = list(dd.keys())
         avg_moods, max_moods, min_moods = [], [], []
         for day_entries in dd.values():
             this_day_moods = [e.mood for e in day_entries]
@@ -349,7 +375,7 @@ class Dataset:
         fig = go.Figure([
             go.Scatter(
                 name='avg',
-                x=days,
+                x=groups,
                 y=avg_moods,
                 # color depends on how many entries there are on that day
                 marker=dict(
@@ -363,7 +389,7 @@ class Dataset:
             ),
             go.Scatter(
                 name='max',
-                x=days,
+                x=groups,
                 y=max_moods,
                 mode='lines',
                 marker=dict(color='#444'),
@@ -372,7 +398,7 @@ class Dataset:
             ),
             go.Scatter(
                 name='min',
-                x=days,
+                x=groups,
                 y=min_moods,
                 marker=dict(color='#444'),
                 line=dict(width=0),
@@ -414,7 +440,8 @@ class Dataset:
             'day': lambda x: x.day,
             'month': lambda x: x.month
         }
-
+        if not what in FUNC_MAP:
+            raise ValueError(f'Invalid value for "what": {what}; expected one of {list(FUNC_MAP.keys())}')
         mood_by: defaultdict[int, list[float]] = defaultdict(list)
         for entry in self:
             mood_by[FUNC_MAP[what](entry.full_date)].append(entry.mood)
@@ -458,7 +485,7 @@ class Dataset:
 
         """
         day_to_total_note_len = defaultdict(float)
-        for day, entries in self.group_by_day().items():
+        for day, entries in self.group_by().items():
             tmp = []
             for entry in entries:
                 tmp.append(len(entry.note) if cap_length == -1 else min(len(entry.note), cap_length))

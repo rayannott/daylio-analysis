@@ -501,3 +501,12 @@ class Dataset:
             template='plotly_dark'
         )
         return fig
+
+
+if __name__ == '__main__':
+    # run `python -i dataset.py` to use in the terminal
+    DATA_DIR = pathlib.Path('data')
+    path = next(DATA_DIR.glob('*.csv'))
+    print('using file', path.name)
+
+    df = Dataset(csv_file_path=path)

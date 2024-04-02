@@ -1,6 +1,6 @@
 import csv, datetime, pathlib, json, re
 from io import TextIOWrapper
-from itertools import groupby, islice
+from itertools import groupby, islice, pairwise
 from functools import lru_cache, cache
 from statistics import mean, stdev, median
 from dataclasses import dataclass
@@ -80,7 +80,7 @@ class Entry:
             include: InclExclActivities,
             exclude: InclExclActivities, 
             mood: MoodCondition | None,
-            note_contains: NoteCondition | None,
+            note_pattern: NoteCondition | None,
             predicate: EntryPredicate | None
             ) -> bool:
         """
@@ -93,7 +93,7 @@ class Entry:
         include: a string or a set of strings
         exclude: a string or a set of strings
         mood: a float or a container of floats
-        note_contains: a string or a container of strings
+        note_contains: a regex pattern or a container of regex patterns
         predicate: a function that takes an Entry object and returns a bool
         """
         if predicate is not None and not predicate(self): return False
@@ -103,16 +103,11 @@ class Entry:
             raise ValueError(f'Some activities are included and excluded at the same time: {include=}; {exclude=}')
         note_condition_result = (
             True 
-            if note_contains is None else
-            note_contains in self.note.lower() 
-            if isinstance(note_contains, str) else 
-            any(el in self.note.lower() for el in note_contains)
+            if note_pattern is None else
+            bool(re.findall(note_pattern, self.note))
+            if isinstance(note_pattern, str) else
+            any(re.findall(pattern, self.note) for pattern in note_pattern)
         )
-        # if isinstance(when, str):
-        #     when = datetime.datetime.strptime(when, DATE_FORMAT_SHOW).date()
-        # when_condition_result = (True if when is None else self.full_date.date() == when)
-        # if isinstance(when, slice):
-        #     when_condition_result = date_slice_to_entry_predicate(when)(self)
         return (
             (True if not include else bool(include & self.activities)) and
             (not exclude & self.activities) and
@@ -247,7 +242,7 @@ class Dataset:
         exclude: a string or a set of strings - only entries without any of these activities will be included
         when: a datetime.date object, a string in the format dd.mm.yyyy or a slice with strings of that format - only entries on this day will be included
         mood: a float or a set of floats - only entries with these moods will be included
-        note_contains: a string or an iterator of strings - only entries with notes containing this string (one of these strings) will be included
+        note_contains: a string or an iterator of strings - only entries with notes matching this/these pattern(s) will be included
         predicate: a function that takes an Entry object and returns a bool - only entries for which this function returns True will be included
         """
         all_activities_set = self.activities().keys()
@@ -382,7 +377,8 @@ class Dataset:
                     color=[len(day) for day in dd.values()],
                     colorscale='Bluered',
                     showscale=True,
-                    colorbar=dict(title='Number of entries')
+                    colorbar=dict(title='Number of entries'),
+                    size=10 if by == 'month' else 5,
                 ),
                 mode='lines+markers',
                 line=dict(color='rgb(31, 119, 180)'),
@@ -472,7 +468,46 @@ class Dataset:
             )
         return fig
 
-    def note_length_plot(self, cap_length: int = -1) -> go.Figure:
+    def entries_differences(self) -> go.Figure:
+        dts = self.get_datetimes()[::-1]
+        diffs = [dt2 - dt1 for dt1, dt2 in pairwise(dts)]
+        fig = go.Figure(data=go.Scatter(
+            x=dts[1:],
+            y=[el.total_seconds() / (3600*24) for el in diffs],
+            mode='lines+markers',
+            line=dict(dash='dashdot'),
+        ))
+        if len(dts) > 100:
+            window_size = len(dts) // 40
+            sliding_average = [mean([el.total_seconds() / (3600*24) for el in diffs[i:i+window_size]]) for i in range(len(diffs) - window_size + 1)]
+            fig.add_trace(
+                go.Scatter(
+                    x=dts[window_size-1:],
+                    y=sliding_average,
+                    mode='lines',
+                    name=f'Sliding average (window size {window_size})',
+                    marker=dict(size=0),
+                    line=dict(width=2)
+                )
+            )
+            # legend
+            fig.update_layout(
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1
+                )
+            )
+        fig.update_layout(
+            yaxis_title='difference, days',
+            title='Difference between consecutive entries in days',
+            template='plotly_dark'
+        )
+        return fig
+
+    def note_length_plot(self) -> go.Figure:
         """
         Generates a line plot showing the average note lengths vs date.
 
@@ -485,20 +520,41 @@ class Dataset:
 
         """
         day_to_total_note_len = defaultdict(float)
-        for day, entries in self.group_by().items():
+        for day, entries in self.group_by('day').items():
             tmp = []
             for entry in entries:
-                tmp.append(len(entry.note) if cap_length == -1 else min(len(entry.note), cap_length))
+                tmp.append(len(entry.note))
             day_to_total_note_len[day] = mean(tmp)
         
-        fig = px.line(
+        window_size = 11
+        import numpy as np
+        sliding_average = np.convolve(list(day_to_total_note_len.values()), np.ones(window_size) / window_size, mode='valid')
+        
+        fig = px.scatter(
             x=day_to_total_note_len.keys(),
             y=day_to_total_note_len.values(),
             labels={'x': 'Date', 'y': 'Average note length'},
             title='Average note length'
         )
+        fig.add_trace(
+            go.Scatter(
+            x=list(day_to_total_note_len.keys())[window_size-1:],
+            y=sliding_average,
+            mode='lines',
+            name=f'Sliding average (window size {window_size})',
+            marker=dict(size=0),
+            line=dict(width=2)
+            )
+        )
         fig.update_layout(
-            template='plotly_dark'
+            template='plotly_dark',
+            legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+            )
         )
         return fig
 

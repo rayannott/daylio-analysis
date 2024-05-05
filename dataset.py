@@ -234,6 +234,7 @@ class Dataset:
         return {day: list(entries) for day, entries in groupby(reversed(self.entries), key=KEYMAP[what])}
     
     def sub(self, 
+            *,
             include: InclExclActivities = set(),
             exclude: InclExclActivities = set(), 
             mood: MoodCondition | None = None,
@@ -272,7 +273,7 @@ class Dataset:
         """
         Get the standard deviation of the mood among all entries
         """
-        return stdev(e.mood for e in self)
+        return stdev(e.mood for e in self) if len(self) > 1 else 0.
     
     @lru_cache
     def activities(self) -> Counter[str]:

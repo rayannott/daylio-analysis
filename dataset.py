@@ -179,11 +179,11 @@ class Dataset:
             return self.group_by('day').get(datetime.datetime.strptime(_date, DATE_FORMAT_SHOW).date(), [])
         raise ValueError('Invalid date format: use dd.mm.yyyy')
     
-    def __matmul__(self, datetime_str: str) -> Entry | None:
+    def __matmul__(self, datetime_like: str | datetime.datetime) -> Entry | None:
         """
         Wrapper for the `at` method.
         """
-        return self.at(datetime_str)
+        return self.at(datetime_like)
     
     def __len__(self) -> int:
         return len(self.entries)
@@ -194,7 +194,7 @@ class Dataset:
         """
         return {activity: num for activity, num in self.activities().items() if activity[0].isupper()}
     
-    def at(self, datetime_str: str) -> Entry | None:
+    def at(self, datetime_like: str | datetime.datetime) -> Entry | None:
         """
         Returns the entry for a particular datetime or None if there is no such entry.
 
@@ -202,13 +202,19 @@ class Dataset:
 
         This is used when calling the Dataset object as a function.
         """
-        if DATETIME_PATTERN.fullmatch(datetime_str):
-            datetime_ = datetime.datetime.strptime(datetime_str, DT_FORMAT_SHOW)
-            for entry in self.entries:
-                if entry.full_date == datetime_:
-                    return entry
-            return None
-        raise ValueError(f'Invalid date string: {datetime_str}; expected format: dd.mm.yyyy or dd.mm.yyyy HH:MM')
+        if isinstance(datetime_like, str):
+            if DATETIME_PATTERN.fullmatch(datetime_like):
+                datetime_ = datetime.datetime.strptime(datetime_like, DT_FORMAT_SHOW)
+            else:
+                raise ValueError(f'Invalid date string: {datetime_like}; expected format: dd.mm.yyyy or dd.mm.yyyy HH:MM')
+        elif isinstance(datetime_like, datetime.datetime):
+            datetime_ = datetime_like
+        else:
+            raise ValueError(f'Invalid type for datetime_like: {type(datetime_like)}; expected str or datetime.datetime')
+        for entry in self.entries:
+            if entry.full_date == datetime_:
+                return entry
+        return None
 
     @lru_cache
     def group_by(self,

@@ -71,9 +71,9 @@ class Entry:
     def __repr__(self) -> str:
         return f'[{self.full_date.strftime(DT_FORMAT_SHOW)}] {self.mood} {", ".join(self.activities)}'
     
-    def verbose(self) -> None:
+    def verbose(self) -> str:
         P = '{}'
-        print(f'{self}\n{P[0]}{self.note}{P[1]}')
+        return f'{self}\n{P[0]}{self.note}{P[1]}'
 
     def check_condition(self, 
             include: InclExclActivities,

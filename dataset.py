@@ -1,7 +1,6 @@
 import csv, datetime, pathlib, json, re
 from io import TextIOWrapper
 from itertools import groupby, islice, pairwise
-from functools import lru_cache, cache
 from statistics import mean, stdev, median
 from dataclasses import dataclass
 from collections import Counter, defaultdict
@@ -216,7 +215,6 @@ class Dataset:
                 return entry
         return None
 
-    @lru_cache
     def group_by(self,
             what: Literal['day', 'month']
         ) -> dict[datetime.date, list[Entry]]:
@@ -261,21 +259,18 @@ class Dataset:
             _entries=[e for e in self if e.check_condition(include, exclude, mood, note_contains, predicate)]
         )
 
-    @lru_cache
     def mood(self) -> float:
         """
         Get the average mood among all entries
         """
         return mean(e.mood for e in self)
 
-    @lru_cache
     def mood_std(self) -> float:
         """
         Get the standard deviation of the mood among all entries
         """
         return stdev(e.mood for e in self) if len(self) > 1 else 0.
     
-    @lru_cache
     def activities(self) -> Counter[str]:
         """
         Returns a Counter object for all activities in the dataset.
@@ -286,7 +281,6 @@ class Dataset:
             c.update(e.activities)
         return c
     
-    @lru_cache
     def get_datetimes(self) -> list[datetime.datetime]:
         return [e.full_date for e in self]
 
@@ -312,7 +306,6 @@ class Dataset:
         if len(self.entries) > n:
             print('...', file=file)
     
-    @lru_cache
     def mood_with_without(self, activity: str) -> MoodWithWithout:
         df_with = self.sub(include=activity)
         df_without = self.sub(exclude=activity)
@@ -336,7 +329,6 @@ class Dataset:
             entries_frequency=median(freqs)
         )
     
-    @lru_cache
     def complete_analysis(self, n_threshold: int = 10) -> list[CompleteAnalysis]:
         """
         Analyse all activities that occur at least (n_threshold) times.

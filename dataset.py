@@ -547,7 +547,60 @@ class Dataset:
                 tickmode="array",
                 tickvals=list(range(7)) if what == "weekday" else list(range(1, 13)),
                 ticktext=WEEKDAYS if what == "weekday" else MONTHS,
-            )
+
+    def mood_change_activity(self, activity: str) -> go.Figure:
+        dates = []
+        with_ = []
+        without_ = []
+        errors_with_ = []
+        errors_without_ = []
+        no_activity_in: list[datetime.date] = []
+        for month, df_month in self.monthly_datasets().items():
+            try:
+                with_without = df_month.mood_with_without(activity)
+                without_.append(with_without.mood_std_without.mood)
+                with_.append(with_without.mood_std_with.mood)
+                errors_with_.append(with_without.mood_std_with.std)
+                errors_without_.append(with_without.mood_std_without.std)
+                dates.append(month)
+            except ValueError:
+                no_activity_in.append(month)
+
+        if not dates:
+            raise ValueError(f"No activity {activity!r} in the dataset")
+        
+        if no_activity_in:
+            print(f"No {activity!r} in {', '.join(month.strftime('%B %Y') for month in no_activity_in)}")
+
+        fig = go.Figure(
+            data=[
+                go.Scatter(
+                    x=dates,
+                    y=with_,
+                    name="with",
+                    mode="lines+markers",
+                    marker=dict(color="#97F66B", symbol="cross-dot", size=10),
+                    line=dict(shape="spline", smoothing=1.3, dash="dash"),
+                ),
+                go.Scatter(
+                    x=dates,
+                    y=without_,
+                    name="without",
+                    mode="lines+markers",
+                    marker=dict(color="#FF522D", symbol="x-dot", size=10),
+                    line=dict(shape="spline", smoothing=1.3, dash="dash"),
+                ),
+            ]
+        )
+        fig.update_layout(
+            template="plotly_dark",
+            title=f"Mood with and without {activity!r}",
+            xaxis=dict(title="Month"),
+            yaxis=dict(title="Mood"),
+            legend=dict(
+                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
+            ),
+        )
         return fig
 
     def entries_differences(self) -> go.Figure:

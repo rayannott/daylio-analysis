@@ -8,22 +8,36 @@ WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 
-class CompleteAnalysis(NamedTuple):
-    activity: str
-    mood_with: float
-    mood_without: float
-    change: float
-    num_of_occurances: int
+class MoodStd(NamedTuple):
+    mood: float
+    std: float
+
+    def __repr__(self) -> str:
+        return f'{self.mood:.3f} ± {self.std:.3f}'
 
 
 class MoodWithWithout(NamedTuple):
-    mood_with: float
-    mood_without: float
+    mood_std_with: MoodStd
+    mood_std_without: MoodStd
+
+    def calc_change(self) -> float:
+        return (self.mood_std_with[0] - self.mood_std_without[0]) / self.mood_std_without[0]
+    
+    def __str__(self) -> str:
+        return f'''with: {self.mood_std_with}
+without: {self.mood_std_without}
+change: {self.calc_change():.2%}'''
+
+
+class CompleteAnalysis(NamedTuple):
+    activity: str
+    mood_with_without: MoodWithWithout
+    num_of_occurances: int
 
 
 @dataclass
 class StatsResult:
-    mood: tuple[float, float]
+    mood: MoodStd
     note_length: tuple[float, float]
     entries_frequency: float
 

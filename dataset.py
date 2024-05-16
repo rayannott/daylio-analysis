@@ -20,6 +20,7 @@ from utils import (
     StatsResult,
     CompleteAnalysis,
     MoodWithWithout,
+    MoodStd,
 )
 
 REMOVE: set[str] = set(
@@ -100,7 +101,7 @@ class Entry:
         )
 
     def __repr__(self) -> str:
-        return f'[{self.full_date.strftime(DT_FORMAT_SHOW)}] {self.mood} {", ".join(self.activities)}'
+        return f'[{self.full_date.strftime(DT_FORMAT_SHOW)}] {self.mood} {", ".join(sorted(self.activities))}'
 
     def verbose(self) -> str:
         P = "{}"
@@ -198,7 +199,7 @@ class Dataset:
         if not self.entries:
             return "Dataset(0 entries)"
         latest_entry_full_date = self.entries[0].full_date
-        return f"Dataset({len(self.entries)} entries; last [{datetime_from_now(latest_entry_full_date)}]; mood: {self.mood():.3f} ± {self.mood_std():.3f})"
+        return f"Dataset({len(self.entries)} entries; last [{datetime_from_now(latest_entry_full_date)}]; mood: {self.mood_std()})"
 
     def __getitem__(self, _date: str | slice) -> "Dataset":
         """
@@ -209,7 +210,7 @@ class Dataset:
             CHECK_FN = date_slice_to_entry_predicate(_date)
         else:
             date = datetime.datetime.strptime(_date, DATE_FORMAT_SHOW).date()
-            CHECK_FN: EntryPredicate = lambda e: e.full_date.date() == date
+            CHECK_FN: EntryPredicate = lambda e: e.full_date.date() == date  # noqa: E731
         return Dataset(_entries=[e for e in self if CHECK_FN(e)])
 
     def __iter__(self) -> Iterator[Entry]:
@@ -293,6 +294,15 @@ class Dataset:
             for day, entries in groupby(reversed(self.entries), key=KEYMAP[what])
         }
 
+    def monthly_datasets(self) -> dict[datetime.date, "Dataset"]:
+        """
+        Returns a dict of Dataset objects grouped by month.
+        """
+        return {
+            month: Dataset(_entries=entries[::-1])
+            for month, entries in self.group_by("month").items()
+        }
+
     def sub(
         self,
         *,
@@ -334,13 +344,19 @@ class Dataset:
         """
         Get the average mood among all entries
         """
-        return mean(e.mood for e in self)
+        return mean(e.mood for e in self) if len(self) > 0 else 0.0
 
-    def mood_std(self) -> float:
+    def std(self) -> float:
         """
         Get the standard deviation of the mood among all entries
         """
         return stdev(e.mood for e in self) if len(self) > 1 else 0.0
+    
+    def mood_std(self) -> MoodStd:
+        """
+        Get the average mood and its standard deviation among all entries
+        """
+        return MoodStd(self.mood(), self.std())
 
     def activities(self) -> Counter[str]:
         """
@@ -378,7 +394,7 @@ class Dataset:
     def mood_with_without(self, activity: str) -> MoodWithWithout:
         df_with = self.sub(include=activity)
         df_without = self.sub(exclude=activity)
-        return MoodWithWithout(df_with.mood(), df_without.mood())
+        return MoodWithWithout(df_with.stats().mood, df_without.stats().mood)
 
     def stats(self) -> StatsResult:
         """
@@ -388,17 +404,16 @@ class Dataset:
             - entries frequency [entries per day] (median)
         as a StatsResult object.
         """
-        moods = [e.mood for e in self]
         note_lengths = [len(e.note) for e in self]
         timedeltas_secs = [
             max(1.0, (d1 - d2).total_seconds())
-            for d1, d2 in zip(self.get_datetimes()[:-1], self.get_datetimes()[1:])
+            for d1, d2 in pairwise(self.get_datetimes())
         ]
-        freqs = [24 * 60 * 60 / td for td in timedeltas_secs]
+        median_timedelta = median(timedeltas_secs)
         return StatsResult(
-            mood=(mean(moods), stdev(moods)),
+            mood=self.mood_std(),
             note_length=(mean(note_lengths), stdev(note_lengths)),
-            entries_frequency=median(freqs),
+            entries_frequency=24 * 60 * 60 / median_timedelta,
         )
 
     def complete_analysis(self, n_threshold: int = 10) -> list[CompleteAnalysis]:
@@ -413,17 +428,15 @@ class Dataset:
         for act, num in cnt.items():
             if num < n_threshold:
                 continue
-            mood_with, mood_without = self.mood_with_without(act)
+            mood_with_without = self.mood_with_without(act)
             res.append(
                 CompleteAnalysis(
                     act,
-                    mood_with,
-                    mood_without,
-                    (mood_with - mood_without) / mood_without,
+                    mood_with_without,
                     num,
                 )
             )
-        res.sort(key=lambda x: x.change, reverse=True)
+        res.sort(key=lambda x: x.mood_with_without.calc_change(), reverse=True)
         return res
 
     # plots:
@@ -547,6 +560,8 @@ class Dataset:
                 tickmode="array",
                 tickvals=list(range(7)) if what == "weekday" else list(range(1, 13)),
                 ticktext=WEEKDAYS if what == "weekday" else MONTHS,
+            )
+        return fig
 
     def mood_change_activity(self, activity: str) -> go.Figure:
         dates = []

@@ -8,7 +8,7 @@ from itertools import groupby, islice, pairwise
 from statistics import mean, stdev, median
 from dataclasses import dataclass
 from collections import Counter, defaultdict
-from typing import Callable, Iterator, Literal
+from typing import Callable, Iterator, Literal, Iterable
 
 import plotly.express as px
 import plotly.graph_objs as go
@@ -44,7 +44,7 @@ AVERAGE_MOOD = {3.0, 3.5, 4.0}
 GOOD_MOOD = {5.0, 6.0}
 
 MoodCondition = float | set[float]
-NoteCondition = str | Iterator[str]
+NoteCondition = str | Iterable[str]
 InclExclActivities = str | set[str]
 EntryPredicate = Callable[["Entry"], bool]
 
@@ -274,7 +274,7 @@ class Dataset:
         return None
 
     def group_by(
-        self, what: Literal["day", "month"]
+        self, what: Literal["day", "week", "month"]
     ) -> dict[datetime.date, list[Entry]]:
         """
         Returns a dict of entries grouped by day with the keys as datetime.date objects, the values are lists of Entry objects.
@@ -283,6 +283,8 @@ class Dataset:
         """
         KEYMAP: dict[str, Callable[[Entry], datetime.date | datetime.datetime]] = {
             "day": lambda x: x.full_date.date(),
+            "week": lambda x: (x.full_date
+            - datetime.timedelta(days=x.full_date.weekday())).date(),
             "month": lambda x: x.full_date.date().replace(day=1),
         }
         if what not in KEYMAP:
@@ -351,7 +353,7 @@ class Dataset:
         Get the standard deviation of the mood among all entries
         """
         return stdev(e.mood for e in self) if len(self) > 1 else 0.0
-    
+
     def mood_std(self) -> MoodStd:
         """
         Get the average mood and its standard deviation among all entries
@@ -441,7 +443,7 @@ class Dataset:
 
     # plots:
 
-    def mood_plot(self, by: Literal["day", "month"] = "day") -> go.Figure:
+    def mood_plot(self, by: Literal["day", "week", "month"] = "day") -> go.Figure:
         """
         Generates a plot of the average, maximum, and minimum moods over time.
         (the area between the maximum and minimum moods is filled)
@@ -453,9 +455,11 @@ class Dataset:
         avg_moods, max_moods, min_moods = [], [], []
         for day_entries in dd.values():
             this_day_moods = [e.mood for e in day_entries]
-            avg_moods.append(mean(this_day_moods))
-            max_moods.append(max(this_day_moods))
-            min_moods.append(min(this_day_moods))
+            this_day_moods_mean = mean(this_day_moods)
+            this_day_moods_std = stdev(this_day_moods) if len(this_day_moods) > 1 else 0
+            avg_moods.append(this_day_moods_mean)
+            max_moods.append(this_day_moods_mean + this_day_moods_std)
+            min_moods.append(this_day_moods_mean - this_day_moods_std)
 
         fig = go.Figure(
             [
@@ -472,10 +476,10 @@ class Dataset:
                         size=10 if by == "month" else 5,
                     ),
                     mode="lines+markers",
-                    line=dict(color="rgb(31, 119, 180)"),
+                    line=dict(color="rgb(31, 119, 180)", shape="spline"),
                 ),
                 go.Scatter(
-                    name="max",
+                    name="avg+std",
                     x=groups,
                     y=max_moods,
                     mode="lines",
@@ -484,7 +488,7 @@ class Dataset:
                     showlegend=False,
                 ),
                 go.Scatter(
-                    name="min",
+                    name="avg-std",
                     x=groups,
                     y=min_moods,
                     marker=dict(color="#444"),
@@ -583,9 +587,11 @@ class Dataset:
 
         if not dates:
             raise ValueError(f"No activity {activity!r} in the dataset")
-        
+
         if no_activity_in:
-            print(f"No {activity!r} in {', '.join(month.strftime('%B %Y') for month in no_activity_in)}")
+            print(
+                f"No {activity!r} in {', '.join(month.strftime('%B %Y') for month in no_activity_in)}"
+            )
 
         fig = go.Figure(
             data=[

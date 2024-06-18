@@ -12,6 +12,8 @@ from typing import Callable, Iterator, Literal, Iterable
 
 import plotly.express as px
 import plotly.graph_objs as go
+import numpy as np
+
 
 from utils import (
     datetime_from_now,
@@ -283,8 +285,9 @@ class Dataset:
         """
         KEYMAP: dict[str, Callable[[Entry], datetime.date | datetime.datetime]] = {
             "day": lambda x: x.full_date.date(),
-            "week": lambda x: (x.full_date
-            - datetime.timedelta(days=x.full_date.weekday())).date(),
+            "week": lambda x: (
+                x.full_date - datetime.timedelta(days=x.full_date.weekday())
+            ).date(),
             "month": lambda x: x.full_date.date().replace(day=1),
         }
         if what not in KEYMAP:
@@ -720,6 +723,38 @@ class Dataset:
             ),
         )
         return fig
+
+    def generate_activity_correlation_matrix(self) -> None:
+        def corr(a1: str, a2: str) -> float:
+            has_a1 = self.sub(include=a1)
+            try:
+                has_both = has_a1.sub(include=a2)
+            except ValueError:
+                return 0.
+            return len(has_both) / len(has_a1)
+
+        activities = self.activities()
+        act = list(activities.keys())
+        corr_mat = np.zeros((len(act), len(act)))
+
+        for i, a1 in enumerate(act):
+            for j, a2 in enumerate(act):
+                if a1 == a2:
+                    corr_mat[i, j] = 1.0
+                else:
+                    corr_mat[i, j] = corr(a1, a2)
+        import plotly.graph_objects as go
+
+        fig = go.Figure(data=go.Heatmap(z=corr_mat, x=act, y=act, colorscale="Viridis"))
+
+        fig.update_layout(
+            autosize=False,
+            width=1200,
+            height=1200,
+            margin=dict(l=50, r=50, b=100, t=100, pad=4),
+        )
+
+        fig.write_html("corr.html")
 
 
 if __name__ == "__main__":

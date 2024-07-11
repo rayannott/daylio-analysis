@@ -17,15 +17,15 @@ class MoodStd(NamedTuple):
 
 
 class MoodWithWithout(NamedTuple):
-    mood_std_with: MoodStd
-    mood_std_without: MoodStd
+    with_: MoodStd
+    without: MoodStd
 
     def calc_change(self) -> float:
-        return (self.mood_std_with[0] - self.mood_std_without[0]) / self.mood_std_without[0]
+        return (self.with_[0] - self.without[0]) / self.without[0]
     
     def __str__(self) -> str:
-        return f'''with: {self.mood_std_with}
-without: {self.mood_std_without}
+        return f'''with: {self.with_}
+without: {self.without}
 change: {self.calc_change():.2%}'''
 
 

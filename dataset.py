@@ -580,10 +580,10 @@ class Dataset:
         for month, df_month in self.monthly_datasets().items():
             try:
                 with_without = df_month.mood_with_without(activity)
-                without_.append(with_without.mood_std_without.mood)
-                with_.append(with_without.mood_std_with.mood)
-                errors_with_.append(with_without.mood_std_with.std)
-                errors_without_.append(with_without.mood_std_without.std)
+                without_.append(with_without.without.mood)
+                with_.append(with_without.with_.mood)
+                errors_with_.append(with_without.with_.std)
+                errors_without_.append(with_without.without.std)
                 dates.append(month)
             except ValueError:
                 no_activity_in.append(month)
@@ -730,7 +730,7 @@ class Dataset:
             try:
                 has_both = has_a1.sub(include=a2)
             except ValueError:
-                return 0.
+                return 0.0
             return len(has_both) / len(has_a1)
 
         activities = self.activities()

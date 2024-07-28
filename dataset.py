@@ -6,19 +6,24 @@ import re
 from io import TextIOWrapper
 from itertools import groupby, islice, pairwise
 from statistics import mean, stdev, median
-from dataclasses import dataclass
 from collections import Counter, defaultdict
-from typing import Callable, Iterator, Literal, Iterable
+from typing import Callable, Iterator, Literal
 
 import plotly.express as px
 import plotly.graph_objs as go
 import numpy as np
 
-
+from entry import Entry, EntryPredicate
 from utils import (
-    datetime_from_now,
     WEEKDAYS,
     MONTHS,
+    DT_FORMAT_SHOW,
+    DATE_FORMAT_SHOW,
+    IncludeExcludeActivities,
+    MoodCondition,
+    NoteCondition,
+    datetime_from_now,
+    date_slice_to_entry_predicate,
     StatsResult,
     CompleteAnalysis,
     MoodWithWithout,
@@ -29,142 +34,16 @@ REMOVE: set[str] = set(
     json.load(open(pathlib.Path("data") / "to_remove.json", "r", encoding="utf-8-sig"))
 )
 
-MOOD_VALUES = {
-    "bad": 1.0,
-    "meh": 2.0,
-    "less ok": 2.5,
-    "ok": 3.0,
-    "alright": 3.5,
-    "good": 4.0,
-    "better": 4.5,
-    "great": 5.0,
-    "awesome": 6.0,
-}
-
 BAD_MOOD = {1.0, 2.0, 2.5}
 AVERAGE_MOOD = {3.0, 3.5, 4.0}
 GOOD_MOOD = {5.0, 6.0}
 
-MoodCondition = float | set[float]
-NoteCondition = str | Iterable[str]
-InclExclActivities = str | set[str]
-EntryPredicate = Callable[["Entry"], bool]
-
-DT_FORMAT_READ = r"%Y-%m-%d %H:%M"
-DT_FORMAT_SHOW = r"%d.%m.%Y %H:%M"
-DATE_FORMAT_SHOW = r"%d.%m.%Y"
-
-DATE_PATTERN = re.compile(r"\d{2}\.\d{2}\.\d{4}")
 DATETIME_PATTERN = re.compile(r"\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}")
-
-
-def date_slice_to_entry_predicate(_slice: slice) -> EntryPredicate:
-    if not (_slice.start or _slice.stop):
-        raise ValueError("At least one of the slice bounds must be given")
-    if _slice.step is not None:
-        print("[Warning]: step is not supported yet")
-    _date_start = (
-        datetime.datetime.strptime(_slice.start, DATE_FORMAT_SHOW)
-        if _slice.start
-        else None
-    )
-    _date_stop = (
-        datetime.datetime.strptime(_slice.stop, DATE_FORMAT_SHOW)
-        if _slice.stop
-        else None
-    )
-
-    def check_date(entry: Entry) -> bool:
-        return (True if _date_start is None else entry.full_date >= _date_start) and (
-            True if _date_stop is None else entry.full_date < _date_stop
-        )
-
-    return check_date
-
-
-@dataclass
-class Entry:
-    full_date: datetime.datetime
-    mood: float
-    activities: set[str]
-    note: str
-
-    @staticmethod
-    def from_dict(row: dict[str, str]) -> "Entry":
-        """Construct an Entry object from a dictionary with the keys as in the CSV file."""
-        datetime_str = row["full_date"] + " " + row["time"]
-        return Entry(
-            full_date=datetime.datetime.strptime(datetime_str, DT_FORMAT_READ),
-            mood=MOOD_VALUES[row["mood"]],
-            activities=set(row["activities"].split(" | "))
-            if row["activities"]
-            else set(),
-            note=row["note"].replace("<br>", "\n"),
-        )
-
-    def __repr__(self) -> str:
-        return f'[{self.full_date.strftime(DT_FORMAT_SHOW)}] {self.mood} {", ".join(sorted(self.activities))}'
-
-    def verbose(self) -> str:
-        P = "{}"
-        return f"{self}\n{P[0]}{self.note}{P[1]}"
-
-    def check_condition(
-        self,
-        include: InclExclActivities,
-        exclude: InclExclActivities,
-        mood: MoodCondition | None,
-        note_pattern: NoteCondition | None,
-        predicate: EntryPredicate | None,
-    ) -> bool:
-        """
-        Checks if an entry (self) fulfils all of the following conditions:
-            has an activity from include
-            does not have an activity from exclude
-            is recorded on a particular day (or a range of days)
-            matches the mood (an exact value or a container of values).
-
-        include: a string or a set of strings
-        exclude: a string or a set of strings
-        mood: a float or a container of floats
-        note_contains: a regex pattern or a container of regex patterns
-        predicate: a function that takes an Entry object and returns a bool
-        """
-        if predicate is not None and not predicate(self):
-            return False
-        if isinstance(include, str):
-            include = {include}
-        if isinstance(exclude, str):
-            exclude = {exclude}
-        if include & exclude:
-            raise ValueError(
-                f"Some activities are included and excluded at the same time: {include=}; {exclude=}"
-            )
-        note_condition_result = (
-            True
-            if note_pattern is None
-            else bool(re.findall(note_pattern, self.note))
-            if isinstance(note_pattern, str)
-            else any(re.findall(pattern, self.note) for pattern in note_pattern)
-        )
-        return (
-            (True if not include else bool(include & self.activities))
-            and (not exclude & self.activities)
-            and
-            # when_condition_result and
-            (
-                True
-                if mood is None
-                else (self.mood in mood if isinstance(mood, set) else self.mood == mood)
-            )
-            and note_condition_result
-            and (True if predicate is None else predicate(self))
-        )
 
 
 class Dataset:
     @staticmethod
-    def _from_csv_file(csv_file_path: str | pathlib.Path):
+    def read_entries_from_csv(csv_file_path: str | pathlib.Path):
         entries: list[Entry] = []
         with open(csv_file_path, "r", encoding="utf-8-sig") as csvfile:
             reader = csv.DictReader(csvfile)
@@ -174,20 +53,18 @@ class Dataset:
 
     def __init__(
         self,
+        csv_file: str | pathlib.Path | None = None,
         *,
-        csv_file_path: str | pathlib.Path | None = None,
         remove: bool = True,
-        _entries: list[Entry]
-        | None = None,  # note: entries might as well have been a tuple
+        _entries: list[Entry] | None = None,
     ) -> None:
         """
-        Construct a Dataset object from a CSV file.
-        Construction using a list of entries is used within the class.
+        Construct a Dataset object from a CSV file exported from the app.
         """
         if _entries is not None:
             self.entries = _entries
-        elif csv_file_path is not None:
-            self.entries = Dataset._from_csv_file(csv_file_path)
+        elif csv_file is not None:
+            self.entries = Dataset.read_entries_from_csv(csv_file)
             if remove:
                 for entr in self.entries:
                     entr.activities -= REMOVE
@@ -227,15 +104,16 @@ class Dataset:
     def __len__(self) -> int:
         return len(self.entries)
 
-    def people(self) -> dict[str, int]:
+    def people(self) -> Counter[str]:
         """
-        Returns a Counter-like dict of people and the number of times they appear in the dataset.
+        Returns a Counter of people and the number of times they appear in the dataset.
         """
-        return {
-            activity: num
-            for activity, num in self.activities().items()
-            if activity[0].isupper()
-        }
+        return Counter(
+            filter(
+                lambda x: x[0].isupper(),
+                (activity for entry in self for activity in entry.activities),
+            )
+        )
 
     def at(self, datetime_like: str | datetime.datetime) -> Entry:
         """
@@ -299,8 +177,8 @@ class Dataset:
     def sub(
         self,
         *,
-        include: InclExclActivities = set(),
-        exclude: InclExclActivities = set(),
+        include: IncludeExcludeActivities = set(),
+        exclude: IncludeExcludeActivities = set(),
         mood: MoodCondition | None = None,
         note_contains: NoteCondition | None = None,
         predicate: EntryPredicate | None = None,
@@ -309,12 +187,15 @@ class Dataset:
         Returns a new Dataset object which is a subset of self
         with the entries filtered according to the arguments.
 
-        include: a string or a set of strings - only entries with at least one of these activities will be included
-        exclude: a string or a set of strings - only entries without any of these activities will be included
-        when: a datetime.date object, a string in the format dd.mm.yyyy or a slice with strings of that format - only entries on this day will be included
-        mood: a float or a set of floats - only entries with these moods will be included
-        note_contains: a string or an iterator of strings - only entries with notes matching this/these pattern(s) will be included
-        predicate: a function that takes an Entry object and returns a bool - only entries for which this function returns True will be included
+        Parameters:
+            - include: a string or a set of strings - only entries with at least one of these activities will be included
+            - exclude: a string or a set of strings - only entries without any of these activities will be included
+            - when: a datetime.date object, a string in the format dd.mm.yyyy or a slice with strings of that format - only entries on this day will be included
+            - mood: a float or a set of floats - only entries with these moods will be included
+            - note_contains: a string or an iterator of strings - only entries with notes matching this/these pattern(s) will be included
+            - predicate: a function that takes an Entry object and returns a bool - only entries for which this function returns True will be included
+
+        Returns: Dataset: a new Dataset object with the filtered entries
         """
         all_activities_set = self.activities().keys()
         if isinstance(include, str):
@@ -365,7 +246,7 @@ class Dataset:
         return [e.full_date for e in self]
 
     def head(
-        self, n: int = 5, file: TextIOWrapper | None = None, verbose: bool = False
+        self, n: int = 5, *, file: TextIOWrapper | None = None, verbose: bool = False
     ) -> None:
         """
         Prints the last n entries (from newest to oldest);
@@ -378,10 +259,10 @@ class Dataset:
         """
         print(self, file=file)
         if n == -1:
-            n = len(self.entries)
+            n = len(self)
         for e in islice(self, n):
             print(e if not verbose else e.verbose(), file=file)
-        if len(self.entries) > n:
+        if len(self) > n:
             print("...", file=file)
 
     def mood_with_without(self, activity: str) -> MoodWithWithout:
@@ -751,4 +632,4 @@ if __name__ == "__main__":
     path = next(DATA_DIR.glob("*.csv"))
     print("using file", path.name)
 
-    df = Dataset(csv_file_path=path)
+    df = Dataset(csv_file=path)

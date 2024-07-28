@@ -218,19 +218,7 @@ class Dataset:
     def __iter__(self) -> Iterator[Entry]:
         return iter(self.entries)
 
-    def __call__(self, _date: str) -> list[Entry]:
-        """
-        Return a list of entries for a particular day.
-        The entries are sorted by time in ascending order.
-        Thus, _date is a string in the format dd.mm.yyyy.
-        """
-        if DATE_PATTERN.fullmatch(_date):
-            return self.group_by("day").get(
-                datetime.datetime.strptime(_date, DATE_FORMAT_SHOW).date(), []
-            )
-        raise ValueError("Invalid date format: use dd.mm.yyyy")
-
-    def __matmul__(self, datetime_like: str | datetime.datetime) -> Entry | None:
+    def __matmul__(self, datetime_like: str | datetime.datetime) -> Entry:
         """
         Wrapper for the `at` method.
         """
@@ -249,9 +237,9 @@ class Dataset:
             if activity[0].isupper()
         }
 
-    def at(self, datetime_like: str | datetime.datetime) -> Entry | None:
+    def at(self, datetime_like: str | datetime.datetime) -> Entry:
         """
-        Returns the entry for a particular datetime or None if there is no such entry.
+        Returns the entry for a particular datetime-like object.
 
         datetime_str: a string in the format dd.mm.yyyy HH:MM
 
@@ -273,7 +261,7 @@ class Dataset:
         for entry in self.entries:
             if entry.full_date == datetime_:
                 return entry
-        return None
+        raise ValueError(f"No entry for {datetime_}")
 
     def group_by(
         self, what: Literal["day", "week", "month"]

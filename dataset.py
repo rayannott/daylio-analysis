@@ -14,6 +14,7 @@ import plotly.graph_objs as go
 import numpy as np
 
 from entry import Entry, EntryPredicate
+from tag import Tag
 from utils import (
     WEEKDAYS,
     MONTHS,
@@ -312,6 +313,16 @@ class Dataset:
             )
         res.sort(key=lambda x: x.mood_with_without.calc_change(), reverse=True)
         return res
+
+    def build_tags(self) -> defaultdict[str, list[Tag]]:
+        """
+        Returns all tags grouped by their names.
+        """
+        tags = defaultdict(list)
+        for entry in self:
+            for t in entry._tags:
+                tags[t.tag].append(t)
+        return tags
 
     # plots:
 

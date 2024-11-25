@@ -1,8 +1,9 @@
 import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import re
 from typing import Callable
 
+from tag import Tag
 from utils import (
     DT_FORMAT_READ,
     DT_FORMAT_SHOW,
@@ -21,6 +22,10 @@ class Entry:
     mood: float
     activities: set[str]
     note: str
+    _tags: list[Tag] = field(default_factory=list)
+
+    def __post_init__(self):
+        self._tags = list(Tag.pull_tags(self.note))
 
     @classmethod
     def from_dict(cls, row: dict[str, str]) -> "Entry":

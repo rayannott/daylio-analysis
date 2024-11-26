@@ -324,6 +324,44 @@ class Dataset:
                 tags[t.tag].append(t)
         return tags
 
+    def show_tags_stats(self):
+        # TODO
+        raise NotImplementedError
+
+    def _tag_prediction(self, requested_tags: list[Tag]) -> None:
+        prediction_pairs: defaultdict[str, list[Tag]] = defaultdict(list)
+        for t in requested_tags:
+            prediction_pairs[t.title].append(t)
+        predictions: list[tuple[Tag, Tag | None]] = []
+        for title, pair in prediction_pairs.items():
+            if len(pair) == 1:
+                predictions.append((pair[0], None))
+                continue
+            if len(pair) > 2:
+                print(f"warning: more than 2 prediction-tags for {title!r}")
+            predictions.append((pair[0], pair[1]))
+
+        for pred1, pred2 in predictions:
+            print(
+                f"{pred1.body} -> {pred2.body if pred2 else '?'} ({pred2 and 'true' in pred2.body})"
+            )
+
+    def _tag_book(self, requested_tags: list[Tag]) -> None:
+        _PS = r"{}"
+        for t in requested_tags:
+            print(f"[{t.title}]:\n{_PS[0]}{t.body}{_PS[1]}\n")
+
+    def analyse_special_tag(self, tag: Literal["prediction", "книга"]):
+        tags = self.build_tags()
+        requested_tags = tags.get(tag)
+        if requested_tags is None or not requested_tags:
+            raise ValueError(f"No tags of type {tag!r}")
+        if tag == "prediction":
+            # group prediction-pairs by title (id)
+            self._tag_prediction(requested_tags)
+        elif tag == "книга":
+            self._tag_book(requested_tags)
+
     # plots:
 
     def mood_plot(self, by: Literal["day", "week", "month"] = "day") -> go.Figure:

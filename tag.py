@@ -52,5 +52,6 @@ class Tag:
                 body = body_all
             yield cls(tag, title, body, entry)
 
+    @property
     def full_date(self) -> datetime.datetime:
         return self._linked_entry.full_date

@@ -25,7 +25,7 @@ class Entry:
     _tags: list[Tag] = field(default_factory=list)
 
     def __post_init__(self):
-        self._tags = list(Tag.pull_tags(self.note))
+        self._tags = list(Tag.pull_tags(self))
 
     @classmethod
     def from_dict(cls, row: dict[str, str]) -> "Entry":

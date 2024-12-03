@@ -1,8 +1,13 @@
 import re
+import datetime
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-TAG_RE = re.compile(r"#([a-zA-Z0-9-]+)(?:\(([^)]+)\))?")
-BODY_TITLE_RE = re.compile(r"([^;]+);?(.*)")
+if TYPE_CHECKING:
+    from entry import Entry
+
+TAG_RE = re.compile(r"#([\w-]+)(?:\(([^)]+)\))?")
+BODY_TITLE_RE = re.compile(r"([^;]+;)?(.*)")
 
 
 @dataclass(frozen=True)
@@ -30,18 +35,22 @@ class Tag:
     """
 
     tag: str
-    body: str = ""
-    title: str = ""
+    title: str
+    body: str
+    _linked_entry: "Entry"
 
     @classmethod
-    def pull_tags(cls, text):
-        for m in TAG_RE.finditer(text):
+    def pull_tags(cls, entry: "Entry"):
+        for m in TAG_RE.finditer(entry.note):
             tag, body_all = m.groups()
             if body_all and (body_match := BODY_TITLE_RE.match(body_all)):
                 title, body = body_match.groups()
-                title = title.strip()
+                title = title.strip("; ") if title is not None else ""
                 body = body.strip()
             else:
                 title = ""
                 body = body_all
-            yield cls(tag, body, title)
+            yield cls(tag, title, body, entry)
+
+    def full_date(self) -> datetime.datetime:
+        return self._linked_entry.full_date

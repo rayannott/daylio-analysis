@@ -3,6 +3,7 @@ import datetime
 import pathlib
 import json
 import re
+import textwrap
 from io import TextIOWrapper
 from itertools import groupby, islice, pairwise
 from statistics import mean, stdev, median
@@ -346,7 +347,10 @@ class Dataset:
     def _tag_book(self, requested_tags: list[Tag]) -> None:
         _PS = r"{}"
         for t in requested_tags:
-            print(f"[{t.title}]:\n{_PS[0]}{t.body}{_PS[1]}\n")
+            print(
+                f"[{t.title}] on {t.full_date():{DATE_FORMAT_SHOW}}:\n"
+                f"{_PS[0]}{textwrap.fill(t.body, width=50)}{_PS[1]}\n"
+            )
 
     def analyse_special_tag(self, tag: Literal["prediction", "книга"]):
         tags = self.build_tags()
@@ -354,7 +358,6 @@ class Dataset:
         if requested_tags is None or not requested_tags:
             raise ValueError(f"No tags of type {tag!r}")
         if tag == "prediction":
-            # group prediction-pairs by title (id)
             self._tag_prediction(requested_tags)
         elif tag == "книга":
             self._tag_book(requested_tags)

@@ -3,7 +3,6 @@ import datetime
 import pathlib
 import json
 import re
-import textwrap
 from io import TextIOWrapper
 from itertools import groupby, islice, pairwise
 from statistics import mean, stdev, median
@@ -13,7 +12,7 @@ from typing import Callable, Iterator, Literal
 import plotly.graph_objs as go
 
 from src.entry import Entry, EntryPredicate
-from src.tag import Tag
+from src.tag import Tag, BookTag
 from src.plotting import Plotter
 from src.utils import (
     DT_FORMAT_SHOW,
@@ -322,6 +321,9 @@ class Dataset:
                 tags[t.tag].append(t)
         return tags
 
+    def get_book_tags(self) -> list[BookTag]:
+        return [BookTag(**tag.__dict__) for tag in self.build_tags().get("книга", [])]
+
     def show_tags_stats(self):
         # TODO
         raise NotImplementedError
@@ -343,24 +345,6 @@ class Dataset:
             print(
                 f"{pred1.body} -> {pred2.body if pred2 else '?'} ({pred2 and 'true' in pred2.body})"
             )
-
-    def _tag_book(self, requested_tags: list[Tag]) -> None:
-        _PS = r"{}"
-        for t in requested_tags:
-            print(
-                f"[{t.title}] on {t.full_date:{DATE_FORMAT_SHOW}}:\n"
-                f"{_PS[0]}{textwrap.fill(t.body, width=50)}{_PS[1]}\n"
-            )
-
-    def analyse_special_tag(self, tag: Literal["prediction", "книга"]):
-        tags = self.build_tags()
-        requested_tags = tags.get(tag)
-        if requested_tags is None or not requested_tags:
-            raise ValueError(f"No tags of type {tag!r}")
-        if tag == "prediction":
-            self._tag_prediction(requested_tags)
-        elif tag == "книга":
-            self._tag_book(requested_tags)
 
     # plots:
 
@@ -409,6 +393,9 @@ class Dataset:
 
         """
         return Plotter.note_length_plot(self)
+    
+    def books_read_plot(self) -> go.Figure:
+        return Plotter.books_read(self)
 
     def generate_activity_correlation_matrix(self) -> None:
         """

@@ -55,3 +55,19 @@ class Tag:
     @property
     def full_date(self) -> datetime.datetime:
         return self._linked_entry.full_date
+
+
+RATING_RE = re.compile(r"(\d+(\.\d+)?)\/10")
+NUM_PAGES_RE = re.compile(r"(\d+)[p|с]")
+
+
+class BookTag(Tag):
+    @property
+    def rating(self) -> float | None:
+        rating = RATING_RE.search(self.body)
+        return float(rating.group(1)) if rating else None
+
+    @property
+    def number_of_pages(self) -> int | None:
+        num_pages = NUM_PAGES_RE.search(self.body)
+        return int(num_pages.group(1)) if num_pages else None

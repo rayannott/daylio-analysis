@@ -1,5 +1,6 @@
 import datetime
 import itertools
+import textwrap
 from typing import Literal, Callable, TYPE_CHECKING
 from statistics import mean, stdev
 from collections import defaultdict
@@ -16,7 +17,9 @@ if TYPE_CHECKING:
 
 class Plotter:
     @staticmethod
-    def mood_plot(df: "Dataset", by: Literal["day", "week", "month"] = "day") -> go.Figure:
+    def mood_plot(
+        df: "Dataset", by: Literal["day", "week", "month"] = "day"
+    ) -> go.Figure:
         dd = df.group_by(by)
         groups = list(dd.keys())
         avg_moods, max_moods, min_moods = [], [], []
@@ -324,3 +327,55 @@ class Plotter:
         )
 
         fig.write_html("corr.html")
+
+    @staticmethod
+    def books_read(df: "Dataset") -> go.Figure:
+        book_tags = df.get_book_tags()
+
+        # repeat index for each book on the same date
+        x_ind = list(
+            (
+                i
+                for i, (_, book_group) in enumerate(
+                    itertools.groupby(book_tags, key=lambda book: book.full_date.date())
+                )
+                for _ in book_group
+            )
+        )
+        x_labels = [book.full_date.strftime("%d.%m.%Y") for book in book_tags]
+
+        fig = go.Figure()
+
+        fig.add_trace(
+            go.Bar(
+                x=x_ind,
+                y=[book.number_of_pages for book in book_tags],
+                marker=dict(
+                    color=[book.rating for book in book_tags],
+                    colorscale="Viridis",
+                    showscale=True,
+                    colorbar=dict(title="Rating"),
+                    cmax=10.0,
+                    cmin=1.0,
+                ),
+                textfont=dict(size=18),
+                text=[book.title for book in book_tags],
+                hovertemplate="<b>%{text}</b><br>Rating: %{marker.color:.1f}<br>Number of pages: %{y} <extra>%{customdata}</extra>",
+                customdata=[
+                    "<br>".join(textwrap.wrap(book.body, width=40))
+                    for book in book_tags
+                ],
+            )
+        )
+
+        fig.update_layout(
+            title="Books",
+            barmode="stack",
+            xaxis_title="Date",
+            yaxis_title="Number of pages",
+            xaxis=dict(tickvals=x_ind, ticktext=x_labels),
+            margin=dict(l=10, r=10, t=45, b=10),
+            template="plotly_dark",
+        )
+
+        return fig

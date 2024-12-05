@@ -1,6 +1,6 @@
 import re
 
-from src.tag import Tag
+from src.tag import BookTag
 
 RATING_RE = re.compile(r"(\d+(\.\d+)?)\/10")
 
@@ -9,7 +9,7 @@ TOGGLE_BUTTON_HTML = """<div class="toggle-btn" onclick="toggleNote('note-{idx}'
 <div class="note" id="note-{idx}">{book_body}</div>"""
 
 
-def get_timeline_html(book_tags: list[Tag]) -> str:
+def get_timeline_html(book_tags: list[BookTag]) -> str:
     html_content = """
     <style>
         body {
@@ -50,7 +50,7 @@ def get_timeline_html(book_tags: list[Tag]) -> str:
             color: #7fffd4;
             margin: 5px 0;
         }
-        .rating {
+        .extra {
             font-size: 0.9em;
             color: #00ffff;
         }
@@ -75,9 +75,16 @@ def get_timeline_html(book_tags: list[Tag]) -> str:
 
     for idx, book in enumerate(book_tags):
         formatted_date = book.full_date.strftime("%B %d, %Y")
-        rating = RATING_RE.search(book.body)
+        rating = book.rating
+        num_pages = book.number_of_pages
+        rating_info = f"{rating:.1f}/10" if rating else ""
+        num_pages_info = f"[{num_pages}pg]" if num_pages else ""
+        rating_num_pages_div = (
+            f'<div class="extra">{rating_info} {num_pages_info}</div>'
+            if rating_info or num_pages_info
+            else ""
+        )
         new_body = RATING_RE.sub("", book.body).strip()
-        rating_div = f'<div class="rating">{rating.group(1)}/10</div>' if rating else ""
         button_logic = (
             TOGGLE_BUTTON_HTML.format(idx=idx, book_body=new_body) if new_body else ""
         )
@@ -85,7 +92,7 @@ def get_timeline_html(book_tags: list[Tag]) -> str:
         <div class="entry">
             <div class="date">{formatted_date}</div>
             <div class="title">{book.title}</div>
-            {rating_div}
+            {rating_num_pages_div}
             {button_logic}
         </div>
         """

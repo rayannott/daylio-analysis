@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from entry import Entry
+    from src.entry import Entry
 
 TAG_RE = re.compile(r"#([\w-]+)(?:\(([^)]+)\))?")
 BODY_TITLE_RE = re.compile(r"([^;]+;)?(.*)")

@@ -8,10 +8,10 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 
-from utils import WEEKDAYS, MONTHS
+from src.utils import WEEKDAYS, MONTHS
 
 if TYPE_CHECKING:
-    from dataset import Dataset
+    from src.dataset import Dataset
 
 
 class Plotter:

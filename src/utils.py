@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Iterable, NamedTuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from entry import EntryPredicate, Entry
+    from src.entry import EntryPredicate, Entry
 
 WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 MONTHS = [

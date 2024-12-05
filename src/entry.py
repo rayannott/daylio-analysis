@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 import re
 from typing import Callable
 
-from tag import Tag
-from utils import (
+from src.tag import Tag
+from src.utils import (
     DT_FORMAT_READ,
     DT_FORMAT_SHOW,
     MOOD_VALUES,

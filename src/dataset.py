@@ -12,10 +12,10 @@ from typing import Callable, Iterator, Literal
 
 import plotly.graph_objs as go
 
-from entry import Entry, EntryPredicate
-from tag import Tag
-from plotting import Plotter
-from utils import (
+from src.entry import Entry, EntryPredicate
+from src.tag import Tag
+from src.plotting import Plotter
+from src.utils import (
     DT_FORMAT_SHOW,
     DATE_FORMAT_SHOW,
     IncludeExcludeActivities,
@@ -348,7 +348,7 @@ class Dataset:
         _PS = r"{}"
         for t in requested_tags:
             print(
-                f"[{t.title}] on {t.full_date():{DATE_FORMAT_SHOW}}:\n"
+                f"[{t.title}] on {t.full_date:{DATE_FORMAT_SHOW}}:\n"
                 f"{_PS[0]}{textwrap.fill(t.body, width=50)}{_PS[1]}\n"
             )
 

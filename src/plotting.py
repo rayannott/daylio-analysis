@@ -351,12 +351,15 @@ class Plotter:
                 x=x_ind,
                 y=[book.number_of_pages for book in book_tags],
                 marker=dict(
-                    color=[book.rating for book in book_tags],
+                    color=[(book.rating or 5.5) for book in book_tags],
                     colorscale="Viridis",
                     showscale=True,
                     colorbar=dict(title="Rating"),
                     cmax=10.0,
                     cmin=1.0,
+                    line=dict(
+                        width=[3 if book.rating is None else 1 for book in book_tags],
+                    ),
                 ),
                 textfont=dict(size=18),
                 text=[book.title for book in book_tags],
@@ -369,12 +372,11 @@ class Plotter:
         )
 
         fig.update_layout(
-            title="Books",
             barmode="stack",
             xaxis_title="Date",
             yaxis_title="Number of pages",
             xaxis=dict(tickvals=x_ind, ticktext=x_labels),
-            margin=dict(l=10, r=10, t=45, b=10),
+            margin=dict(l=10, r=10, t=10, b=10),
             template="plotly_dark",
         )
 

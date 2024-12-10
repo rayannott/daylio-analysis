@@ -1,7 +1,7 @@
 import re
 import datetime
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 
 if TYPE_CHECKING:
     from src.entry import Entry
@@ -40,7 +40,7 @@ class Tag:
     _linked_entry: "Entry"
 
     @classmethod
-    def pull_tags(cls, entry: "Entry"):
+    def pull_tags(cls, entry: "Entry") -> Iterable["Tag"]:
         for m in TAG_RE.finditer(entry.note):
             tag, body_all = m.groups()
             if body_all and (body_match := BODY_TITLE_RE.match(body_all)):

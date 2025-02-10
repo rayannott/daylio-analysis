@@ -327,28 +327,6 @@ class Dataset:
     def get_book_tags(self) -> list[BookTag]:
         return [BookTag(**tag.__dict__) for tag in self.build_tags().get("книга", [])]
 
-    def show_tags_stats(self):
-        # TODO
-        raise NotImplementedError
-
-    def _tag_prediction(self, requested_tags: list[Tag]) -> None:
-        prediction_pairs: defaultdict[str, list[Tag]] = defaultdict(list)
-        for t in requested_tags:
-            prediction_pairs[t.title].append(t)
-        predictions: list[tuple[Tag, Tag | None]] = []
-        for title, pair in prediction_pairs.items():
-            if len(pair) == 1:
-                predictions.append((pair[0], None))
-                continue
-            if len(pair) > 2:
-                print(f"warning: more than 2 prediction-tags for {title!r}")
-            predictions.append((pair[0], pair[1]))
-
-        for pred1, pred2 in predictions:
-            print(
-                f"{pred1.body} -> {pred2.body if pred2 else '?'} ({pred2 and 'true' in pred2.body})"
-            )
-
     # plots:
 
     def mood_plot(self, by: Literal["day", "week", "month"] = "day") -> go.Figure:

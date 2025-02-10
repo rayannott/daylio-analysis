@@ -261,7 +261,10 @@ class Dataset:
         for e in islice(self, n):
             print(e if not verbose else e.verbose(), file=file)
         if len(self) > n:
-            print("...", file=file)
+            print(
+                f"    and {len(self) - n} more entries...",
+                file=file,
+            )
 
     def mood_with_without(self, activity: str) -> MoodWithWithout:
         df_with = self.sub(include=activity)

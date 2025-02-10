@@ -374,9 +374,39 @@ class Dataset:
 
         """
         return Plotter.note_length_plot(self)
-    
+
     def books_read_plot(self) -> go.Figure:
         return Plotter.books_read(self)
+
+    def show_calendar_plot(
+        self,
+        years: list[int] | None = None,
+        cmap: str = "RdYlGn",
+        colorbar: bool = False,
+    ) -> None:
+        """
+        Displays a calendar heatmap of daily average mood values.
+
+        This function generates a heatmap using `calplot` to visualize daily mood data over time.
+        It supports filtering by specific years and allows customization of the colormap and colorbar.
+
+        Args:
+            df : Dataset
+                A dataset containing mood entries, where each entry has a `mood` attribute and is grouped by day.
+            years : list[int] | None, optional
+                A list of years to include in the plot. If None (default), all years are included.
+            cmap : str, optional
+                The colormap used for the heatmap. Defaults to `"RdYlGn"` (Yellow-Green).
+                Also consider: `["afmhot", "YlGn"]`
+            colorbar : bool, optional
+                Whether to display the colorbar. Defaults to False.
+
+        Notes:
+            - Missing days are correctly handled (i.e., not plotted as zero).
+            - Mood values are expected to range between `vmin=1.0` and `vmax=6.0`.
+            - Days with a mood value of exactly zero are dropped from the plot.
+        """
+        return Plotter.show_calendar_plot(self, years, cmap, colorbar)
 
     def generate_activity_correlation_matrix(self) -> None:
         """

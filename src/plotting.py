@@ -5,7 +5,9 @@ from typing import Literal, Callable, TYPE_CHECKING
 from statistics import mean, stdev
 from collections import defaultdict
 
+import calplot
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
@@ -381,3 +383,32 @@ class Plotter:
         )
 
         return fig
+
+    @staticmethod
+    def show_calendar_plot(
+        df: "Dataset",
+        years: list[int] | None = None,
+        cmap: str = "YlGn",
+        colorbar: bool = False,
+    ) -> None:
+        def include_day(day: datetime.date) -> bool:
+            return years is None or day.year in years
+
+        daily_avg_mood = {
+            day: mean(e.mood for e in entries)
+            for day, entries in df.group_by("day").items()
+            if include_day(day)
+        }
+
+        index = pd.to_datetime(list(daily_avg_mood.keys()))
+        values = pd.Series(list(daily_avg_mood.values()), index=index)
+
+        _ = calplot.calplot(
+            values,
+            cmap=cmap,
+            colorbar=colorbar,
+            yearlabel_kws={"fontname": "sans-serif", "fontsize": 14},
+            dropzero=True,
+            vmin=1.0,
+            vmax=6.0,
+        )

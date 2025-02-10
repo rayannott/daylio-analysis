@@ -1,2 +1,5 @@
+ipykernel
+plotly
+nbformat
 calplot
 pandas

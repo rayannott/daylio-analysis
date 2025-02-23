@@ -1,12 +1,41 @@
-import re
-
 from src.tag import BookTag
-
-RATING_RE = re.compile(r"(\d+(\.\d+)?)\/10")
+from src.clippings import Highlight
 
 
 TOGGLE_BUTTON_HTML = """<div class="toggle-btn" onclick="toggleNote('note-{idx}')">Show Note</div>
 <div class="note" id="note-{idx}">{book_body}</div>"""
+
+
+def get_highlights_html(highlights: list[Highlight], idx: int) -> str:
+    """Generates HTML for the collapsable list of highlights for a book without title/author and added_on info."""
+    if not highlights:
+        return ""
+
+    highlights_html = '<div class="highlights">'
+    for h in highlights:
+        # Only include page and location details
+        page_info = f" | page: {h.page}" if h.page is not None else ""
+        location_info = f"location: {h.location[0]}-{h.location[1]}"
+        date_time = f"on {h.added_on:%d.%m.%Y} at {h.added_on:%H:%M}"
+
+        highlight_html = f"""
+        <div class="highlight">
+            <div class="highlight-meta">{location_info} | {date_time}{page_info} </div>
+            <div class="highlight-text">{h.text}</div>
+        """
+        if h.note:
+            highlight_html += f'<div class="highlight-note">{h.note}</div>'
+        highlight_html += "</div>"
+        highlights_html += highlight_html
+    highlights_html += "</div>"
+
+    toggle_html = f"""
+    <div class="toggle-btn" onclick="toggleHighlights('highlights-{idx}')">Show Highlights</div>
+    <div class="highlights-container" id="highlights-{idx}" style="display: none;">
+        {highlights_html}
+    </div>
+    """
+    return toggle_html
 
 
 def get_timeline_html(book_tags: list[BookTag]) -> str:
@@ -54,7 +83,7 @@ def get_timeline_html(book_tags: list[BookTag]) -> str:
             font-size: 0.9em;
             color: #00ffff;
         }
-        .note {
+        .note, .highlights-container {
             font-style: italic;
             color: #bdc3c7;
             display: none;
@@ -69,6 +98,23 @@ def get_timeline_html(book_tags: list[BookTag]) -> str:
         .toggle-btn:hover {
             text-decoration: underline;
         }
+        .highlight {
+            margin-bottom: 15px;
+            padding: 5px;
+            border-bottom: 1px solid #555;
+        }
+        .highlight-meta {
+            font-size: 0.85em;
+            color: #8ab4f8;
+        }
+        .highlight-text {
+            margin-top: 5px;
+        }
+        .highlight-note {
+            margin-top: 5px;
+            font-style: normal;
+            color: #d3d3d3;
+        }
     </style>
     <div class="timeline">
     """
@@ -77,23 +123,25 @@ def get_timeline_html(book_tags: list[BookTag]) -> str:
         formatted_date = book.full_date.strftime("%B %d, %Y")
         rating = book.rating
         num_pages = book.number_of_pages
-        rating_info = f"{rating:.1f}/10" if rating else ""
-        num_pages_info = f"[{num_pages}pg]" if num_pages else ""
+        rating_info = f"{rating:.1f}/10" if rating is not None else ""
+        num_pages_info = f"[{num_pages} pages]" if num_pages is not None else ""
         rating_num_pages_div = (
             f'<div class="extra">{rating_info} {num_pages_info}</div>'
             if rating_info or num_pages_info
             else ""
         )
-        new_body = RATING_RE.sub("", book.body).strip()
         button_logic = (
-            TOGGLE_BUTTON_HTML.format(idx=idx, book_body=new_body) if new_body else ""
+            TOGGLE_BUTTON_HTML.format(idx=idx, book_body=book.body) if book.body else ""
         )
+        highlights_section = get_highlights_html(book.highlights, idx)
+
         html_content += f"""
         <div class="entry">
             <div class="date">{formatted_date}</div>
             <div class="title">{book.title}</div>
             {rating_num_pages_div}
             {button_logic}
+            {highlights_section}
         </div>
         """
 
@@ -110,7 +158,18 @@ def get_timeline_html(book_tags: list[BookTag]) -> str:
                 note.style.display = "none";
                 btn.textContent = "Show Note";
             }
-    }
+        }
+        function toggleHighlights(highlightsId) {
+            const container = document.getElementById(highlightsId);
+            const btn = container.previousElementSibling;
+            if (container.style.display === "none" || container.style.display === "") {
+                container.style.display = "block";
+                btn.textContent = "Hide Highlights";
+            } else {
+                container.style.display = "none";
+                btn.textContent = "Show Highlights";
+            }
+        }
     </script>
     """
 

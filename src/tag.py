@@ -3,6 +3,8 @@ import datetime
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Iterable
 
+from src.clippings import Highlight, GroupedHighlightsType
+
 if TYPE_CHECKING:
     from src.entry import Entry
 
@@ -10,7 +12,7 @@ TAG_RE = re.compile(r"#([\w-]+)(?:\(([^)]+)\))?")
 BODY_TITLE_RE = re.compile(r"([^;]+;)?(.*)")
 
 
-@dataclass(frozen=True)
+@dataclass
 class Tag:
     """
     A class to represent a tag in a note.
@@ -62,6 +64,11 @@ NUM_PAGES_RE = re.compile(r"(\d+)[p|с]")
 
 
 class BookTag(Tag):
+    highlights: list[Highlight] = []  # bad
+
+    def __repr__(self) -> str:
+        return f"Book({self.title}: {self.body}; entry={self._linked_entry}; {len(self.highlights)} highlights)"
+
     @property
     def rating(self) -> float | None:
         rating = RATING_RE.search(self.body)
@@ -71,3 +78,8 @@ class BookTag(Tag):
     def number_of_pages(self) -> int | None:
         num_pages = NUM_PAGES_RE.search(self.body)
         return int(num_pages.group(1)) if num_pages else None
+
+    def try_assign_highlights(self, groups: GroupedHighlightsType):
+        for k, v in groups.items():
+            if k.lower() == self.title.lower():
+                self.highlights = v

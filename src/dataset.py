@@ -284,11 +284,15 @@ class Dataset:
             max(1.0, (d1 - d2).total_seconds())
             for d1, d2 in pairwise(self.get_datetimes())
         ]
-        median_timedelta = median(timedeltas_secs)
         return StatsResult(
             mood=self.mood_std(),
-            note_length=(mean(note_lengths), stdev(note_lengths)),
-            entries_frequency=24 * 60 * 60 / median_timedelta,
+            note_length=(
+                mean(note_lengths),
+                stdev(note_lengths) if len(note_lengths) > 1 else 0.0,
+            ),
+            entries_frequency=24 * 60 * 60 / median(timedeltas_secs)
+            if len(timedeltas_secs) > 1
+            else None,
         )
 
     def complete_analysis(self, n_threshold: int = 10) -> list[CompleteAnalysis]:

@@ -99,18 +99,19 @@ class CompleteAnalysis(NamedTuple):
 class StatsResult:
     mood: MoodStd
     note_length: tuple[float, float]
-    entries_frequency: float
+    entries_frequency: float | None
 
     def __repr__(self) -> str:
         FORMAT = "{}: {:.3f} ± {:.3f}{}"
-        median_timedelta = datetime.timedelta(days=1 / self.entries_frequency)
-        return "\n".join(
-            [
-                FORMAT.format("Mood", *self.mood, ""),
-                FORMAT.format("Note length", *self.note_length, " symbols"),
-                f"Entries frequency: {self.entries_frequency:.3f} entries per day (once every {timedelta_for_humans(median_timedelta)})",
-            ]
-        )
+        dat = [
+            FORMAT.format("Mood", *self.mood, ""),
+            FORMAT.format("Note length", *self.note_length, " symbols"),
+        ]
+        if self.entries_frequency:
+            dat.append(
+                f"Entries frequency: {self.entries_frequency:.3f} entries per day (once every {timedelta_for_humans(datetime.timedelta(days=1 / self.entries_frequency))})"
+            )
+        return "\n".join(dat)
 
 
 def timedelta_for_humans(timedelta: datetime.timedelta) -> str:
@@ -125,7 +126,7 @@ def timedelta_for_humans(timedelta: datetime.timedelta) -> str:
     values = [years, months, days, hours, minutes, seconds]
     res = ""
     for value, word in dropwhile(lambda x: x[0] == 0, zip(values, words)):
-        res += f'{value} {word}{"s" if value > 1 else ""} ' if value else ""
+        res += f"{value} {word}{'s' if value > 1 else ''} " if value else ""
     return res.strip()
 
 

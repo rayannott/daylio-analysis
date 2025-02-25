@@ -331,20 +331,36 @@ class Plotter:
         fig.write_html("corr.html")
 
     @staticmethod
-    def books_read(df: "Dataset") -> go.Figure:
-        book_tags = df.get_book_tags()
+    def books_read(
+        df: "Dataset",
+        full: bool,
+        groupby: Literal["date", "month"],
+    ) -> go.Figure:
+        book_tags = df.get_book_tags()[::-1]
+
+        def groupby_func(full_date: datetime.datetime) -> datetime.date:
+            if groupby == "date":
+                return full_date.date()
+            if groupby == "month":
+                return full_date.replace(day=1).date()
+            raise ValueError(f"Invalid value for 'groupby': {groupby}")
 
         # repeat index for each book on the same date
         x_ind = list(
             (
                 i
                 for i, (_, book_group) in enumerate(
-                    itertools.groupby(book_tags, key=lambda book: book.full_date.date())
+                    itertools.groupby(
+                        book_tags, key=lambda book: groupby_func(book.full_date)
+                    )
                 )
                 for _ in book_group
             )
         )
-        x_labels = [book.full_date.strftime("%d.%m.%Y") for book in book_tags]
+        x_labels = [
+            book.full_date.strftime("%d.%m.%Y" if groupby == "date" else "%m.%Y")
+            for book in book_tags
+        ]
 
         fig = go.Figure()
 
@@ -365,19 +381,36 @@ class Plotter:
                 ),
                 textfont=dict(size=18),
                 text=[book.title for book in book_tags],
-                hovertemplate="<b>%{text}</b><br>Rating: %{marker.color:.1f}<br>Number of pages: %{y} <extra>%{customdata}</extra>",
+                hovertemplate="<b>%{text}</b><br>%{customdata[0]}Rating: %{marker.color:.1f}<br>Number of pages: %{y} <extra>%{customdata[1]}</extra>",
                 customdata=[
-                    "<br>".join(textwrap.wrap(book.body, width=40))
+                    (
+                        f"<i>{book.author}</i><br>" if book.author else "",  # author
+                        "<br>".join(textwrap.wrap(book.body, width=40)),  # body
+                    )
                     for book in book_tags
                 ],
             )
         )
+        # if full:  # TODO: make this work when more data
+        #     _slice = slice(None, None, len(x_ind) // 6)
+        #     x_ind = x_ind[_slice]
+        #     x_labels = x_labels[_slice]
 
         fig.update_layout(
             barmode="stack",
-            xaxis_title="Date",
+            xaxis_title="Date" if groupby == "date" else "Month",
             yaxis_title="Number of pages",
-            xaxis=dict(tickvals=x_ind, ticktext=x_labels),
+            xaxis=dict(
+                tickvals=x_ind,
+                ticktext=x_labels,
+                tickangle=45,
+                range=[x_ind[-min(len(x_ind) - 1, 12)], x_ind[-1]]
+                if not full
+                else None,
+                fixedrange=full,
+            ),
+            yaxis=dict(fixedrange=True),
+            dragmode="pan",
             margin=dict(l=10, r=10, t=10, b=10),
             template="plotly_dark",
         )

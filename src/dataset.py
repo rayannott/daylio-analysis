@@ -325,7 +325,7 @@ class Dataset:
         return tags
 
     def get_book_tags(self) -> list[BookTag]:
-        return [BookTag(**tag.__dict__) for tag in self.build_tags().get("книга", [])]
+        return [BookTag.from_tag(tag) for tag in self.build_tags().get("книга", [])]
 
     # plots:
 
@@ -375,8 +375,13 @@ class Dataset:
         """
         return Plotter.note_length_plot(self)
 
-    def books_read_plot(self) -> go.Figure:
-        return Plotter.books_read(self)
+    def books_read_plot(
+        self,
+        *,
+        full: bool = False,
+        groupby: Literal["date", "month"] = "date",
+    ) -> go.Figure:
+        return Plotter.books_read(self, full, groupby)
 
     def show_calendar_plot(
         self,

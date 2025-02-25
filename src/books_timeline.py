@@ -135,10 +135,12 @@ def get_timeline_html(book_tags: list[BookTag]) -> str:
         )
         highlights_section = get_highlights_html(book.highlights, idx)
 
+        author_str = f" [{book.author}]" if book.author else ""
+
         html_content += f"""
         <div class="entry">
             <div class="date">{formatted_date}</div>
-            <div class="title">{book.title}</div>
+            <div class="title">{book.title}{author_str}</div>
             {rating_num_pages_div}
             {button_logic}
             {highlights_section}

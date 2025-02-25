@@ -28,7 +28,7 @@ class Tag:
 
     Example usage:
         when finished reading a book and have some thoughts
-            "#book(book title; I liked the book)"
+            "#книга(book title; I liked the book)"
         when suddenly have a good idea
             "#idea(eureka!; some good idea here)"
     """
@@ -58,13 +58,21 @@ class Tag:
 
 RATING_RE = re.compile(r"(\d+(\.\d+)?)\/10")
 NUM_PAGES_RE = re.compile(r"(\d+)[p|с]")
+AUTHOR_RE = re.compile(r"\[(.+)\]")
 
 
 class BookTag(Tag):
     highlights: list[Highlight] = []  # bad
 
+    @classmethod
+    def from_tag(cls, tag: Tag) -> "BookTag":
+        assert tag.tag == "книга", "Only 'книга' tags are supported"
+        assert tag.title, "Book title is required"
+        return cls(tag.tag, tag.title, tag.body, tag._linked_entry)
+
     def __repr__(self) -> str:
-        return f"Book({self.title}: {self.body}; entry={self._linked_entry}; {len(self.highlights)} highlights)"
+        author_str = f" [{self.author}]" if self.author else ""
+        return f"Book({self.title}{author_str}: {self.body}; entry={self._linked_entry}; {len(self.highlights)} highlights)"
 
     @property
     def rating(self) -> float | None:
@@ -75,6 +83,11 @@ class BookTag(Tag):
     def number_of_pages(self) -> int | None:
         num_pages = NUM_PAGES_RE.search(self.body)
         return int(num_pages.group(1)) if num_pages else None
+
+    @property
+    def author(self) -> str | None:
+        author = AUTHOR_RE.search(self.body)
+        return author.group(1) if author else None
 
     def try_assign_highlights(self, groups: GroupedHighlightsType):
         for k, v in groups.items():

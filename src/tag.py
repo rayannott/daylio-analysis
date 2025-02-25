@@ -31,9 +31,6 @@ class Tag:
             "#book(book title; I liked the book)"
         when suddenly have a good idea
             "#idea(eureka!; some good idea here)"
-        when making a prediction to be checked later
-            "#prediction(us-elections-2024; pretty sure Trump will lose)"
-            "#prediction(us-elections-2024; false: Trump actually won, holy shit)"
     """
 
     tag: str

@@ -131,7 +131,7 @@ def get_timeline_html(book_tags: list[BookTag]) -> str:
             else ""
         )
         button_logic = (
-            TOGGLE_BUTTON_HTML.format(idx=idx, book_body=book.body) if book.body else ""
+            TOGGLE_BUTTON_HTML.format(idx=idx, book_body=book.body_clean)
         )
         highlights_section = get_highlights_html(book.highlights, idx)
 

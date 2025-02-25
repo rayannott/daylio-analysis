@@ -72,7 +72,9 @@ class BookTag(Tag):
 
     def __repr__(self) -> str:
         author_str = f" [{self.author}]" if self.author else ""
-        return f"Book({self.title}{author_str}: {self.body}; entry={self._linked_entry}; {len(self.highlights)} highlights)"
+        rating_str = f" {self.rating}/10" if self.rating else ""
+        pages_str = f" {self.number_of_pages}p" if self.number_of_pages else ""
+        return f"Book({self.title}{author_str}{rating_str}{pages_str}: {self.body_clean}; entry={self._linked_entry})"
 
     @property
     def rating(self) -> float | None:
@@ -88,6 +90,18 @@ class BookTag(Tag):
     def author(self) -> str | None:
         author = AUTHOR_RE.search(self.body)
         return author.group(1) if author else None
+
+    @property
+    def body_clean(self) -> str:
+        cleaned = RATING_RE.sub("", self.body)
+        cleaned = NUM_PAGES_RE.sub("", cleaned)
+        if m := AUTHOR_RE.search(cleaned):
+            if m.end() == len(cleaned):
+                cleaned = cleaned[: m.start()]
+            else:
+                cleaned = AUTHOR_RE.sub(m.group(1), cleaned)
+        cleaned = cleaned.strip(" ,")
+        return cleaned
 
     def try_assign_highlights(self, groups: GroupedHighlightsType):
         for k, v in groups.items():

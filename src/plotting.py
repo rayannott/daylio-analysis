@@ -385,7 +385,7 @@ class Plotter:
                 customdata=[
                     (
                         f"<i>{book.author}</i><br>" if book.author else "",  # author
-                        "<br>".join(textwrap.wrap(book.body, width=40)),  # body
+                        "<br>".join(textwrap.wrap(book.body_clean, width=40)),  # body
                     )
                     for book in book_tags
                 ],

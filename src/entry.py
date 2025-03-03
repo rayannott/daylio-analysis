@@ -4,11 +4,11 @@ import re
 from typing import Callable
 
 from src.tag import Tag
+from src.entry_condition import EntryCondition
 from src.utils import (
     DT_FORMAT_READ,
     DT_FORMAT_SHOW,
     MOOD_VALUES,
-    MoodCondition,
     NoteCondition,
     IncludeExcludeActivities,
 )
@@ -41,30 +41,31 @@ class Entry:
         )
 
     def __repr__(self) -> str:
-        return f'[{self.full_date.strftime(DT_FORMAT_SHOW)}] {self.mood} {", ".join(sorted(self.activities))}'
+        return f"[{self.full_date.strftime(DT_FORMAT_SHOW)}] {self.mood} {', '.join(sorted(self.activities))}"
 
     def verbose(self) -> str:
         return f"{self}\n{'{'}{self.note}{'}'}"
 
     def check_condition(
         self,
+        condition: EntryCondition | None,
         include: IncludeExcludeActivities,
         exclude: IncludeExcludeActivities,
-        mood: MoodCondition | None,
         note_pattern: NoteCondition | None,
         predicate: EntryPredicate | None,
     ) -> bool:
         """
         Checks if an entry (self) fulfils all of the following conditions:
-            - has an activity from include
-            - does not have an activity from exclude
-            - is recorded on a particular day (or a range of days)
-            - matches the mood (an exact value or a container of values).
+            - satisfies a condition (if provided)
+            - has an activity from include (if provided)
+            - does not have an activity from exclude (if provided)
+            - contains a note pattern (if provided)
+            - satisfies a predicate (if provided)
 
         Parameters:
+            - condition: an EntryCondition object
             - include: a string or a set of strings
             - exclude: a string or a set of strings
-            - mood: a float or a container of floats
             - note_contains: a regex pattern or a container of regex patterns
             - predicate: a function that takes an Entry object and returns a bool
 
@@ -88,13 +89,9 @@ class Entry:
             else any(re.findall(pattern, self.note) for pattern in note_pattern)
         )
         return (
-            (True if not include else bool(include & self.activities))
+            (True if condition is None else condition.check(self))
+            and (True if not include else bool(include & self.activities))
             and (not exclude & self.activities)
-            and (
-                True
-                if mood is None
-                else (self.mood in mood if isinstance(mood, set) else self.mood == mood)
-            )
             and note_condition_result
             and (True if predicate is None else predicate(self))
         )

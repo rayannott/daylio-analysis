@@ -14,11 +14,11 @@ import plotly.graph_objs as go
 from src.entry import Entry, EntryPredicate
 from src.tag import Tag, BookTag
 from src.plotting import Plotter
+from src.entry_condition import EntryCondition
 from src.utils import (
     DT_FORMAT_SHOW,
     DATE_FORMAT_SHOW,
     IncludeExcludeActivities,
-    MoodCondition,
     NoteCondition,
     datetime_from_now,
     date_slice_to_entry_predicate,
@@ -31,10 +31,6 @@ from src.utils import (
 REMOVE: set[str] = set(
     json.load(open(pathlib.Path("data") / "to_remove.json", "r", encoding="utf-8-sig"))
 )
-
-BAD_MOOD = {1.0, 2.0, 2.5}
-AVERAGE_MOOD = {3.0, 3.5, 4.0}
-GOOD_MOOD = {5.0, 6.0}
 
 DATETIME_PATTERN = re.compile(r"\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}")
 
@@ -101,6 +97,9 @@ class Dataset:
 
     def __len__(self) -> int:
         return len(self.entries)
+    
+    def __eq__(self, other: "Dataset") -> bool:
+        return self.entries == other.entries
 
     def people(self) -> Counter[str]:
         """
@@ -174,10 +173,10 @@ class Dataset:
 
     def sub(
         self,
+        condition: EntryCondition | None = None,
         *,
         include: IncludeExcludeActivities = set(),
         exclude: IncludeExcludeActivities = set(),
-        mood: MoodCondition | None = None,
         note_contains: NoteCondition | None = None,
         predicate: EntryPredicate | None = None,
     ) -> "Dataset":
@@ -186,6 +185,7 @@ class Dataset:
         with the entries filtered according to the arguments.
 
         Parameters:
+            - condition: an EntryCondition object - only entries that satisfy this condition will be included
             - include: a string or a set of strings - only entries with at least one of these activities will be included
             - exclude: a string or a set of strings - only entries without any of these activities will be included
             - when: a datetime.date object, a string in the format dd.mm.yyyy or a slice with strings of that format - only entries on this day will be included
@@ -208,7 +208,7 @@ class Dataset:
             _entries=[
                 e
                 for e in self
-                if e.check_condition(include, exclude, mood, note_contains, predicate)
+                if e.check_condition(condition, include, exclude, note_contains, predicate)
             ]
         )
 

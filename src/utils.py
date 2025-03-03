@@ -39,7 +39,6 @@ DT_FORMAT_READ = r"%Y-%m-%d %H:%M"
 DT_FORMAT_SHOW = r"%d.%m.%Y %H:%M"
 DATE_FORMAT_SHOW = r"%d.%m.%Y"
 
-MoodCondition = float | set[float]
 NoteCondition = str | Iterable[str]
 IncludeExcludeActivities = str | set[str]
 

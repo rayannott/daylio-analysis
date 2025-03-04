@@ -97,7 +97,7 @@ class Dataset:
 
     def __len__(self) -> int:
         return len(self.entries)
-    
+
     def __eq__(self, other: "Dataset") -> bool:
         return self.entries == other.entries
 
@@ -208,7 +208,9 @@ class Dataset:
             _entries=[
                 e
                 for e in self
-                if e.check_condition(condition, include, exclude, note_contains, predicate)
+                if e.check_condition(
+                    condition, include, exclude, note_contains, predicate
+                )
             ]
         )
 
@@ -277,6 +279,7 @@ class Dataset:
             - mood (avg ± std)
             - note length [num symbols] (avg ± std)
             - entries frequency [entries per day] (median)
+            - total number of activities
         as a StatsResult object.
         """
         note_lengths = [len(e.note) for e in self]
@@ -293,6 +296,7 @@ class Dataset:
             entries_frequency=24 * 60 * 60 / median(timedeltas_secs)
             if len(timedeltas_secs) > 1
             else None,
+            number_of_activities=sum(len(e.activities) for e in self),
         )
 
     def complete_analysis(self, n_threshold: int = 10) -> list[CompleteAnalysis]:
@@ -365,7 +369,7 @@ class Dataset:
     def entries_differences(self) -> go.Figure:
         return Plotter.entries_differences(self)
 
-    def note_length_plot(self) -> go.Figure:
+    def note_length_plot(self, window_size: int = 11) -> go.Figure:
         """
         Generates a line plot showing the average note lengths vs date.
 
@@ -375,9 +379,8 @@ class Dataset:
 
         Returns:
             go.Figure: A plotly figure object representing the line plot.
-
         """
-        return Plotter.note_length_plot(self)
+        return Plotter.note_length_plot(self, window_size)
 
     def books_read_plot(
         self,
@@ -424,6 +427,12 @@ class Dataset:
         Saves the matrix as an html interactive plot.
         """
         return Plotter.generate_activity_correlation_matrix(self)
+
+    def people_frequency(self) -> go.Figure:
+        """
+        Generates a bar plot of the frequency of people in the dataset.
+        """
+        return Plotter.people_frequency(self)
 
 
 if __name__ == "__main__":

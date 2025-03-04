@@ -245,7 +245,7 @@ class Plotter:
         return fig
 
     @staticmethod
-    def note_length_plot(df: "Dataset") -> go.Figure:
+    def note_length_plot(df: "Dataset", window_size: int) -> go.Figure:
         """
         Generates a line plot showing the average note lengths vs date.
 
@@ -263,9 +263,6 @@ class Plotter:
             for entry in entries:
                 tmp.append(len(entry.note))
             day_to_total_note_len[day] = mean(tmp)
-
-        window_size = 11
-        import numpy as np
 
         sliding_average = np.convolve(
             list(day_to_total_note_len.values()),
@@ -329,6 +326,18 @@ class Plotter:
         )
 
         fig.write_html("corr.html")
+
+    @staticmethod
+    def people_frequency(df: "Dataset") -> go.Figure:
+        ppl, frequencies = zip(*df.people().most_common())
+        fig = go.Figure(data=[go.Bar(x=ppl, y=frequencies)])
+        fig.update_layout(
+            title="People Frequencies",
+            xaxis_tickangle=45,
+            margin=dict(l=10, r=10, t=40, b=10),
+            template="plotly_dark",
+        )
+        return fig
 
     @staticmethod
     def books_read(

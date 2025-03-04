@@ -99,18 +99,22 @@ class StatsResult:
     mood: MoodStd
     note_length: tuple[float, float]
     entries_frequency: float | None
+    number_of_activities: int
 
     def __repr__(self) -> str:
         FORMAT = "{}: {:.3f} ± {:.3f}{}"
         dat = [
-            FORMAT.format("Mood", *self.mood, ""),
-            FORMAT.format("Note length", *self.note_length, " symbols"),
+            FORMAT.format("- mood", *self.mood, ""),
+            FORMAT.format("- note length", *self.note_length, " symbols"),
         ]
+        dat.append(f"- number of activities: {self.number_of_activities:,}")
         if self.entries_frequency:
             dat.append(
-                f"Entries frequency: {self.entries_frequency:.3f} entries per day (once every {timedelta_for_humans(datetime.timedelta(days=1 / self.entries_frequency))})"
+                f"- entries frequency: {self.entries_frequency:.3f} entries per day (once every {timedelta_for_humans(datetime.timedelta(days=1 / self.entries_frequency))})"
             )
-        return "\n".join(dat)
+
+        res = f"Stats(\n    {'\n    '.join(dat)}\n)"
+        return res
 
 
 def timedelta_for_humans(timedelta: datetime.timedelta) -> str:

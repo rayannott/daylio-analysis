@@ -1,9 +1,20 @@
 import datetime
+import difflib
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from src.entry import Entry
+
+
+ALLOWED_ACTIVITIES: set[str] = set()
+PEOPLE: set[str] = set()
+
+
+def register(activities: set[str]):
+    global ALLOWED_ACTIVITIES, PEOPLE
+    ALLOWED_ACTIVITIES = activities
+    PEOPLE = {a for a in activities if a[0].isupper()}
 
 
 class EntryCondition(ABC):
@@ -92,8 +103,19 @@ class NoteContains(EntryCondition):
 
 
 class Has(EntryCondition):
+    @staticmethod
+    def _raise():
+        if not ALLOWED_ACTIVITIES:
+            raise ValueError(
+                "No activities are registered. Run `register(activities)` first."
+            )
+
     def __init__(self, activity: str):
-        assert activity, "Must not be empty"
+        self._raise()
+        if ALLOWED_ACTIVITIES and activity not in ALLOWED_ACTIVITIES:
+            maybe_this = difflib.get_close_matches(activity, ALLOWED_ACTIVITIES, n=1)
+            maybe_this = f" Did you mean {maybe_this[0]!r}?" if maybe_this else ""
+            raise ValueError(f"Unknown activity: {activity!r}.{maybe_this}")
         self.activity = activity
 
     def check(self, entry: "Entry") -> bool:
@@ -104,6 +126,11 @@ class Has(EntryCondition):
 
     def __str__(self) -> str:
         return self.activity
+
+    @classmethod
+    def people(cls) -> "HasPeople":
+        cls._raise()
+        return HasPeople(PEOPLE)
 
 
 class HasPeople(EntryCondition):

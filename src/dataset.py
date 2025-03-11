@@ -8,6 +8,7 @@ from itertools import groupby, islice, pairwise
 from statistics import mean, stdev, median
 from collections import Counter, defaultdict
 from typing import Callable, Iterator, Literal
+from functools import singledispatchmethod
 
 import plotly.graph_objs as go
 
@@ -112,6 +113,7 @@ class Dataset:
             )
         )
 
+    @singledispatchmethod
     def at(self, datetime_like: str | datetime.datetime) -> Entry:
         """
         Returns the entry for a particular datetime-like object.
@@ -120,23 +122,26 @@ class Dataset:
 
         This is used when calling the Dataset object as a function.
         """
-        if isinstance(datetime_like, str):
-            if DATETIME_PATTERN.fullmatch(datetime_like):
-                datetime_ = datetime.datetime.strptime(datetime_like, DT_FORMAT_SHOW)
-            else:
-                raise ValueError(
-                    f"Invalid date string: {datetime_like}; expected format: dd.mm.yyyy or dd.mm.yyyy HH:MM"
-                )
-        elif isinstance(datetime_like, datetime.datetime):
-            datetime_ = datetime_like
-        else:
-            raise ValueError(
-                f"Invalid type for datetime_like: {type(datetime_like)}; expected str or datetime.datetime"
-            )
+        raise NotImplementedError(f"Unsupported type: {type(datetime_like)}")
+
+    def _at(self, datetime_: datetime.datetime) -> Entry:
         for entry in self.entries:
             if entry.full_date == datetime_:
                 return entry
         raise ValueError(f"No entry for {datetime_}")
+
+    @at.register
+    def _(self, datetime_like: str) -> Entry:
+        if not DATETIME_PATTERN.fullmatch(datetime_like):
+            raise ValueError(
+                f"Invalid date string: {datetime_like}; expected format: dd.mm.yyyy HH:MM"
+            )
+        datetime_ = datetime.datetime.strptime(datetime_like, DT_FORMAT_SHOW)
+        return self._at(datetime_)
+
+    @at.register
+    def _(self, datetime_: datetime.datetime) -> Entry:
+        return self._at(datetime_)
 
     def group_by(
         self, what: Literal["day", "week", "month"]

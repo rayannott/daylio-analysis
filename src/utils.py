@@ -29,9 +29,10 @@ MOOD_VALUES = {
     "less ok": 2.5,
     "ok": 3.0,
     "alright": 3.5,
-    "good": 4.0,
-    "better": 4.5,
-    "great": 5.0,
+    "fine": 4.0,
+    "good": 4.3,
+    "great": 4.7,
+    "amazing": 5.3,
     "awesome": 6.0,
 }
 

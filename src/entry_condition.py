@@ -71,6 +71,12 @@ class DateInterval(EntryCondition):
         after_str = f"{self.start_dt:%d.%m.%Y}" if self.start_dt else ""
         before_str = f"{self.end_dt:%d.%m.%Y}" if self.end_dt else ""
         return f"({after_str}...{before_str})"
+    
+    @classmethod
+    def __class_getitem__(cls, _slice: slice) -> "DateInterval":
+        start = _slice.start if _slice.start is not None else ""
+        end = _slice.stop if _slice.stop is not None else ""
+        return cls(start, end)
 
 
 class MoodInterval(EntryCondition):
@@ -86,6 +92,14 @@ class MoodInterval(EntryCondition):
 
     def __str__(self) -> str:
         return f"({self.low:.2f} <= mood < {self.high:.2f})"
+    
+    @classmethod
+    def __class_getitem__(cls, _slice: slice) -> "MoodInterval":
+        low = _slice.start if _slice.start is not None else float("-inf")
+        high = _slice.stop if _slice.stop is not None else float("inf")
+        if low > high:
+            raise ValueError("Low bound must be less than the high bound")
+        return cls(low, high)
 
 
 class NoteContains(EntryCondition):

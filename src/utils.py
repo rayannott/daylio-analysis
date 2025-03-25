@@ -2,7 +2,7 @@ from __future__ import annotations
 import datetime
 from itertools import dropwhile
 from dataclasses import dataclass
-from typing import Iterable, NamedTuple, TYPE_CHECKING
+from typing import Iterable, NamedTuple, TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from src.entry import EntryPredicate, Entry
@@ -42,6 +42,7 @@ DATE_FORMAT_SHOW = r"%d.%m.%Y"
 
 NoteCondition = str | Iterable[str]
 IncludeExcludeActivities = str | set[str]
+GroupByTypes = Literal["day", "week", "month"]
 
 
 def date_slice_to_entry_predicate(_slice: slice) -> EntryPredicate:

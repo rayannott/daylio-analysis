@@ -27,6 +27,7 @@ from src.utils import (
     CompleteAnalysis,
     MoodWithWithout,
     MoodStd,
+    GroupByTypes,
 )
 
 REMOVE: set[str] = set(
@@ -143,9 +144,7 @@ class Dataset:
     def _(self, datetime_: datetime.datetime) -> Entry:
         return self._at(datetime_)
 
-    def group_by(
-        self, what: Literal["day", "week", "month"]
-    ) -> dict[datetime.date, list[Entry]]:
+    def group_by(self, what: GroupByTypes) -> dict[datetime.date, list[Entry]]:
         """
         Returns a dict of entries grouped by day with the keys as datetime.date objects, the values are lists of Entry objects.
 
@@ -342,7 +341,7 @@ class Dataset:
 
     # plots:
 
-    def mood_plot(self, by: Literal["day", "week", "month"] = "day") -> go.Figure:
+    def mood_plot(self, by: GroupByTypes = "day") -> go.Figure:
         """
         Generates a plot of the average, maximum, and minimum moods over time.
         (the area between the maximum and minimum moods is filled)
@@ -374,7 +373,7 @@ class Dataset:
     def entries_differences(self) -> go.Figure:
         return Plotter.entries_differences(self)
 
-    def note_length_plot(self, window_size: int = 11) -> go.Figure:
+    def note_length_plot(self, groupby: GroupByTypes = "week") -> go.Figure:
         """
         Generates a line plot showing the average note lengths vs date.
 
@@ -385,7 +384,7 @@ class Dataset:
         Returns:
             go.Figure: A plotly figure object representing the line plot.
         """
-        return Plotter.note_length_plot(self, window_size)
+        return Plotter.note_length_plot(self, groupby)
 
     def books_read_plot(
         self,

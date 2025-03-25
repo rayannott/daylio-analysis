@@ -2,7 +2,7 @@ import datetime
 import itertools
 import textwrap
 from typing import Literal, Callable, TYPE_CHECKING
-from statistics import mean, stdev
+from statistics import mean, stdev, median
 from collections import defaultdict
 
 import calplot
@@ -11,7 +11,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
-from src.utils import WEEKDAYS, MONTHS
+from src.utils import WEEKDAYS, MONTHS, GroupByTypes
 
 if TYPE_CHECKING:
     from src.dataset import Dataset
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 class Plotter:
     @staticmethod
     def mood_plot(
-        df: "Dataset", by: Literal["day", "week", "month"] = "day"
+        df: "Dataset", by: GroupByTypes = "day"
     ) -> go.Figure:
         dd = df.group_by(by)
         groups = list(dd.keys())
@@ -245,7 +245,7 @@ class Plotter:
         return fig
 
     @staticmethod
-    def note_length_plot(df: "Dataset", window_size: int) -> go.Figure:
+    def note_length_plot(df: "Dataset", groupby: GroupByTypes) -> go.Figure:
         """
         Generates a line plot showing the average note lengths vs date.
 
@@ -257,41 +257,43 @@ class Plotter:
             go.Figure: A plotly figure object representing the line plot.
 
         """
-        day_to_total_note_len = defaultdict(float)
-        for day, entries in df.group_by("day").items():
-            tmp = []
-            for entry in entries:
-                tmp.append(len(entry.note))
-            day_to_total_note_len[day] = mean(tmp)
 
-        sliding_average = np.convolve(
-            list(day_to_total_note_len.values()),
-            np.ones(window_size) / window_size,
-            mode="valid",
-        )
+        def se(data: list[int]) -> float:
+            return stdev(data) / len(data) if len(data) > 1 else 0
 
-        fig = px.scatter(
-            x=day_to_total_note_len.keys(),
-            y=day_to_total_note_len.values(),
-            labels={"x": "Date", "y": "Average note length"},
-            title="Average note length",
+        time_to_note_lens = {
+            time_per: [len(entry.note) for entry in entries]
+            for time_per, entries in df.group_by(groupby).items()
+        }
+
+        x_vals = list(time_to_note_lens.keys())
+        y_vals = [mean(time_per) for time_per in time_to_note_lens.values()]
+        medians = [median(time_per) for time_per in time_to_note_lens.values()]
+        stdevs = [se(time_per) for time_per in time_to_note_lens.values()]
+        n_entries = [len(time_per) for time_per in time_to_note_lens.values()]
+
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=x_vals,
+                y=y_vals,
+                error_y=dict(type="data", array=stdevs, visible=True),
+                mode="markers+lines",
+                line_shape="spline",
+                customdata=n_entries,
+                hovertemplate="Date: %{x}<br>Average note length: %{y}<br>Number of entries: %{customdata}<extra></extra>",
+            )
         )
         fig.add_trace(
             go.Scatter(
-                x=list(day_to_total_note_len.keys())[window_size - 1 :],
-                y=sliding_average,
-                mode="lines",
-                name=f"Sliding average (window size {window_size})",
-                marker=dict(size=0),
-                line=dict(width=2),
+                x=x_vals,
+                y=medians,
+                mode="markers",
+                marker=dict(color="red", size=7, symbol="x"),
+                name="median",
             )
         )
-        fig.update_layout(
-            template="plotly_dark",
-            legend=dict(
-                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
-            ),
-        )
+        fig.update_layout(template="plotly_dark")
         return fig
 
     @staticmethod

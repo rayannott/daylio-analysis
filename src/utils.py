@@ -2,10 +2,10 @@ from __future__ import annotations
 import datetime
 from itertools import dropwhile
 from dataclasses import dataclass
-from typing import Iterable, NamedTuple, TYPE_CHECKING, Literal
+from typing import Iterable, NamedTuple, TYPE_CHECKING, Literal, Callable
 
 if TYPE_CHECKING:
-    from src.entry import EntryPredicate, Entry
+    from src.entry import Entry
 
 WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 MONTHS = [
@@ -43,30 +43,18 @@ DATE_FORMAT_SHOW = r"%d.%m.%Y"
 NoteCondition = str | Iterable[str]
 IncludeExcludeActivities = str | set[str]
 GroupByTypes = Literal["day", "week", "month"]
+EntryPredicate = Callable[["Entry"], bool]
+
+FMTS = ["%d.%m.%Y", "%d %b %Y", "%d %B %Y"]
 
 
-def date_slice_to_entry_predicate(_slice: slice) -> EntryPredicate:
-    if not (_slice.start or _slice.stop):
-        raise ValueError("At least one of the slice bounds must be given")
-    if _slice.step is not None:
-        print("[Warning]: step is not supported yet")
-    _date_start = (
-        datetime.datetime.strptime(_slice.start, DATE_FORMAT_SHOW)
-        if _slice.start
-        else None
-    )
-    _date_stop = (
-        datetime.datetime.strptime(_slice.stop, DATE_FORMAT_SHOW)
-        if _slice.stop
-        else None
-    )
-
-    def check_date(entry: Entry) -> bool:
-        return (True if _date_start is None else entry.full_date >= _date_start) and (
-            True if _date_stop is None else entry.full_date < _date_stop
-        )
-
-    return check_date
+def parse_date(date: str) -> datetime.datetime:
+    for fmt in FMTS:
+        try:
+            return datetime.datetime.strptime(date, fmt)
+        except ValueError:
+            pass
+    raise ValueError(f"Could not parse date: {date}")
 
 
 class MoodStd(NamedTuple):

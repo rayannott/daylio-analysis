@@ -282,7 +282,7 @@ class Plotter:
         x_vals = list(time_to_note_lens.keys())
         y_vals = [mean(time_per) for time_per in time_to_note_lens.values()]
         medians = [median(time_per) for time_per in time_to_note_lens.values()]
-        stdevs = [se(time_per) for time_per in time_to_note_lens.values()]
+        standard_errors = [se(time_per) for time_per in time_to_note_lens.values()]
         n_entries = [len(time_per) for time_per in time_to_note_lens.values()]
 
         fig = go.Figure()
@@ -290,11 +290,12 @@ class Plotter:
             go.Scatter(
                 x=x_vals,
                 y=y_vals,
-                error_y=dict(type="data", array=stdevs, visible=True),
+                error_y=dict(type="data", array=standard_errors, visible=True),
                 mode="markers+lines",
                 line_shape="spline",
                 customdata=n_entries,
                 hovertemplate="Date: %{x}<br>Average note length: %{y}<br>Number of entries: %{customdata}<extra></extra>",
+                name="mean ± se",
             )
         )
         fig.add_trace(
@@ -306,7 +307,13 @@ class Plotter:
                 name="median",
             )
         )
-        fig.update_layout(template="plotly_dark")
+        fig.update_layout(
+            template="plotly_dark",
+            legend=dict(
+                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
+            ),
+            margin=dict(l=10, r=10, t=10, b=10),
+        )
         return fig
 
     @staticmethod

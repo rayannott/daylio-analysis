@@ -15,19 +15,17 @@ import plotly.graph_objs as go
 from src.entry import Entry, EntryPredicate
 from src.tag import Tag, BookTag
 from src.plotting import Plotter
-from src.entry_condition import EntryCondition
+from src.entry_condition import EntryCondition, DateIn
 from src.utils import (
-    DT_FORMAT_SHOW,
-    DATE_FORMAT_SHOW,
     IncludeExcludeActivities,
     NoteCondition,
     datetime_from_now,
-    date_slice_to_entry_predicate,
     StatsResult,
     CompleteAnalysis,
     MoodWithWithout,
     MoodStd,
     GroupByTypes,
+    parse_date,
 )
 
 REMOVE: set[str] = set(
@@ -92,12 +90,8 @@ class Dataset:
         Returns a new Dataset object which is a subset of self
         with the entries filtered according to the date or date range as a slice.
         """
-        if isinstance(_date, slice):
-            CHECK_FN = date_slice_to_entry_predicate(_date)
-        else:
-            date = datetime.datetime.strptime(_date, DATE_FORMAT_SHOW).date()
-            CHECK_FN: EntryPredicate = lambda e: e.full_date.date() == date  # noqa: E731
-        return Dataset(_entries=[e for e in self if CHECK_FN(e)])
+        di = DateIn[_date]
+        return self.sub(di)  # type: ignore # TODO: find workaround
 
     def __iter__(self) -> Iterator[Entry]:
         return iter(self.entries)
@@ -144,11 +138,7 @@ class Dataset:
 
     @at.register
     def _(self, datetime_like: str) -> Entry:
-        if not DATETIME_PATTERN.fullmatch(datetime_like):
-            raise ValueError(
-                f"Invalid date string: {datetime_like}; expected format: dd.mm.yyyy HH:MM"
-            )
-        datetime_ = datetime.datetime.strptime(datetime_like, DT_FORMAT_SHOW)
+        datetime_ = parse_date(datetime_like)
         return self._at(datetime_)
 
     @at.register

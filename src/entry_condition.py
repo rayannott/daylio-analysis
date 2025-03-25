@@ -1,7 +1,10 @@
 import datetime
 import difflib
+import math
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
+
+from src.utils import EntryPredicate, parse_date
 
 if TYPE_CHECKING:
     from src.entry import Entry
@@ -39,25 +42,19 @@ class EntryCondition(ABC):
     def check(self, entry: "Entry") -> bool: ...
 
 
-FMTS = ["%d.%m.%Y", "%d %b %Y", "%d %B %Y"]
-
-
-class DateInterval(EntryCondition):
-    @staticmethod
-    def _parse_date(date: str) -> datetime.datetime:
-        for fmt in FMTS:
-            try:
-                return datetime.datetime.strptime(date, fmt)
-            except ValueError:
-                pass
-        raise ValueError(f"Could not parse date: {date}")
-
+class DateIn(EntryCondition):
     def __init__(self, start: str = "", end: str = ""):
         assert start or end, "At least one of the bounds must be given"
-        self.start_dt = self._parse_date(start) if start else None
-        self.end_dt = self._parse_date(end) if end else None
+        self.start_dt = parse_date(start) if start else None
+        self.end_dt = parse_date(end) if end else None
 
     def check(self, entry: "Entry") -> bool:
+        if (
+            self.start_dt is not None
+            and self.end_dt is not None
+            and self.start_dt == self.end_dt
+        ):
+            return entry.full_date.date() == self.start_dt.date()
         after_check = self.start_dt is None or entry.full_date >= self.start_dt
         before_check = self.end_dt is None or entry.full_date < self.end_dt
         return after_check and before_check
@@ -71,30 +68,37 @@ class DateInterval(EntryCondition):
         after_str = f"{self.start_dt:%d.%m.%Y}" if self.start_dt else ""
         before_str = f"{self.end_dt:%d.%m.%Y}" if self.end_dt else ""
         return f"({after_str}...{before_str})"
-    
-    @classmethod
-    def __class_getitem__(cls, _slice: slice) -> "DateInterval":
-        start = _slice.start if _slice.start is not None else ""
-        end = _slice.stop if _slice.stop is not None else ""
+
+    def __class_getitem__(cls, _slice_str: slice | str) -> "DateIn":
+        if isinstance(_slice_str, str):
+            return cls(_slice_str, _slice_str)
+        start = _slice_str.start if _slice_str.start is not None else ""
+        end = _slice_str.stop if _slice_str.stop is not None else ""
         return cls(start, end)
 
 
-class MoodInterval(EntryCondition):
+class MoodIn(EntryCondition):
     def __init__(self, low: float = float("-inf"), high: float = float("inf")):
         self.low = low
         self.high = high
 
     def check(self, entry: "Entry") -> bool:
-        return self.low <= entry.mood < self.high
+        return (
+            self.low <= entry.mood < self.high
+            if self.low != self.high
+            else math.isclose(entry.mood, self.low)
+        )
 
     def __repr__(self) -> str:
         return f"MoodInterval({self.low}, {self.high})"
 
     def __str__(self) -> str:
         return f"({self.low:.2f} <= mood < {self.high:.2f})"
-    
+
     @classmethod
-    def __class_getitem__(cls, _slice: slice) -> "MoodInterval":
+    def __class_getitem__(cls, _slice: slice | int) -> "MoodIn":
+        if isinstance(_slice, int):
+            return cls(_slice, _slice)
         low = _slice.start if _slice.start is not None else float("-inf")
         high = _slice.stop if _slice.stop is not None else float("inf")
         if low > high:
@@ -102,18 +106,18 @@ class MoodInterval(EntryCondition):
         return cls(low, high)
 
 
-class NoteContains(EntryCondition):
-    def __init__(self, word: str):
-        self.word = word
+class NoteHas(EntryCondition):
+    def __init__(self, *words: str):
+        self.words = words
 
     def check(self, entry: "Entry") -> bool:
-        return self.word in entry.note.lower()
+        return any(word in entry.note.lower() for word in self.words)
 
     def __repr__(self) -> str:
-        return f"NoteContains({self.word})"
+        return f"NoteContains({'|'.join(self.words)})"
 
     def __str__(self) -> str:
-        return f"(note with {self.word!r})"
+        return f"(note with {self.words})"
 
 
 class Has(EntryCondition):
@@ -201,6 +205,20 @@ class And(EntryCondition):
 
     def __str__(self) -> str:
         return f"{' & '.join(map(str, self.conds))}"
+
+
+class Predicate(EntryCondition):
+    def __init__(self, predicate: EntryPredicate):
+        self.predicate = predicate
+
+    def check(self, entry: "Entry") -> bool:
+        return self.predicate(entry)
+
+    def __repr__(self) -> str:
+        return f"Predicate()"
+
+    def __str__(self) -> str:
+        return "Predicate()"
 
 
 A = Has

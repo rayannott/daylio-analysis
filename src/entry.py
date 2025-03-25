@@ -11,9 +11,8 @@ from src.utils import (
     MOOD_VALUES,
     NoteCondition,
     IncludeExcludeActivities,
+    EntryPredicate,
 )
-
-EntryPredicate = Callable[["Entry"], bool]
 
 
 @dataclass
@@ -66,7 +65,7 @@ class Entry:
             - condition: an EntryCondition object
             - include: a string or a set of strings
             - exclude: a string or a set of strings
-            - note_contains: a regex pattern or a container of regex patterns
+            - note_contains: a string or a container of strings
             - predicate: a function that takes an Entry object and returns a bool
 
         Returns: bool: True if all conditions are met, False otherwise
@@ -90,9 +89,12 @@ class Entry:
         note_condition_result = (
             True
             if note_pattern is None
-            else bool(re.findall(note_pattern, self.note))
-            if isinstance(note_pattern, str)
-            else any(re.findall(pattern, self.note) for pattern in note_pattern)
+            else any(
+                word in self.note.lower()
+                for word in (
+                    [note_pattern] if isinstance(note_pattern, str) else note_pattern
+                )
+            )
         )
         return (
             (True if not include else bool(include & self.activities))

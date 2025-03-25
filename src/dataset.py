@@ -53,10 +53,14 @@ class Dataset:
         *,
         remove: bool = True,
         _entries: list[Entry] | None = None,
+        _generating_entry_condition: EntryCondition | None = None,
+        _parent_stats: StatsResult | None = None,
     ) -> None:
         """
         Construct a Dataset object from a CSV file exported from the app.
         """
+        self._generating_entry_condition = _generating_entry_condition
+        self._parent_stats = _parent_stats
         if _entries is not None:
             self.entries = _entries
         elif csv_file is not None:
@@ -73,8 +77,15 @@ class Dataset:
     def __repr__(self) -> str:
         if not self.entries:
             return "Dataset(0 entries)"
-        latest_entry_full_date = self.entries[0].full_date
-        return f"Dataset({len(self.entries)} entries; last [{datetime_from_now(latest_entry_full_date)}]; mood: {self.mood_std()})"
+        change_from_parent_info = (
+            ""
+            if self._parent_stats is None
+            else (f" ({(self._parent_stats >> self.stats()).calc_change():+.2%})")
+        )
+        return (
+            f"Dataset({len(self.entries)} entries; last [{datetime_from_now(self.entries[0].full_date)}]; "
+            f"mood: {self.mood_std()}{change_from_parent_info})"
+        )
 
     def __getitem__(self, _date: str | slice) -> "Dataset":
         """
@@ -213,9 +224,15 @@ class Dataset:
                 e
                 for e in self
                 if e.check_condition(
-                    condition, include, exclude, note_contains, predicate
+                    condition,
+                    include,
+                    exclude,
+                    note_contains,
+                    predicate,
                 )
-            ]
+            ],
+            _generating_entry_condition=condition,
+            _parent_stats=self.stats(),
         )
 
     def mood(self) -> float:
@@ -275,7 +292,12 @@ class Dataset:
     def mood_with_without(self, activity: str) -> MoodWithWithout:
         df_with = self.sub(include=activity)
         df_without = self.sub(exclude=activity)
-        return MoodWithWithout(df_with.stats().mood, df_without.stats().mood)
+        return MoodWithWithout(
+            df_with.stats().mood,
+            df_without.stats().mood,
+            len(df_with),
+            len(df_without),
+        )
 
     def stats(self) -> StatsResult:
         """

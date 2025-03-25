@@ -1,6 +1,7 @@
 import datetime
 import itertools
 import textwrap
+from math import sqrt
 from typing import Literal, Callable, TYPE_CHECKING
 from statistics import mean, stdev, median
 from collections import defaultdict
@@ -19,9 +20,7 @@ if TYPE_CHECKING:
 
 class Plotter:
     @staticmethod
-    def mood_plot(
-        df: "Dataset", by: GroupByTypes = "day"
-    ) -> go.Figure:
+    def mood_plot(df: "Dataset", by: GroupByTypes = "day") -> go.Figure:
         dd = df.group_by(by)
         groups = list(dd.keys())
         avg_moods, max_moods, min_moods = [], [], []
@@ -145,16 +144,24 @@ class Plotter:
         dates = []
         with_ = []
         without_ = []
+        n_entries_with_ = []
+        n_entries_without = []
         errors_with_ = []
-        errors_without_ = []
+        errors_without = []
         no_activity_in: list[datetime.date] = []
         for month, df_month in df.monthly_datasets().items():
             try:
                 with_without = df_month.mood_with_without(activity)
                 without_.append(with_without.without.mood)
                 with_.append(with_without.with_.mood)
-                errors_with_.append(with_without.with_.std)
-                errors_without_.append(with_without.without.std)
+                n_entries_with_.append(with_without.n_entries_with_)
+                n_entries_without.append(with_without.n_entries_without)
+                errors_with_.append(
+                    with_without.with_.std / sqrt(with_without.n_entries_with_)
+                )
+                errors_without.append(
+                    with_without.without.std / sqrt(with_without.n_entries_without)
+                )
                 dates.append(month)
             except ValueError:
                 no_activity_in.append(month)
@@ -172,24 +179,30 @@ class Plotter:
                 go.Scatter(
                     x=dates,
                     y=with_,
+                    error_y=dict(type="data", array=errors_with_),
                     name="with",
                     mode="lines+markers",
                     marker=dict(color="#97F66B", symbol="cross-dot", size=10),
                     line=dict(shape="spline", smoothing=1.3, dash="dash"),
+                    customdata=n_entries_with_,
+                    hovertemplate="%{y}<extra>%{customdata} entries</extra>",
                 ),
                 go.Scatter(
                     x=dates,
                     y=without_,
+                    error_y=dict(type="data", array=errors_without),
                     name="without",
                     mode="lines+markers",
                     marker=dict(color="#FF522D", symbol="x-dot", size=10),
                     line=dict(shape="spline", smoothing=1.3, dash="dash"),
+                    customdata=n_entries_without,
+                    hovertemplate="%{y}<extra>%{customdata} entries</extra>",
                 ),
             ]
         )
         fig.update_layout(
             template="plotly_dark",
-            title=f"Mood with and without {activity!r}",
+            title=f"Mood with and without {activity!r}; mean ± se",
             xaxis=dict(title="Month"),
             yaxis=dict(title="Mood"),
             legend=dict(

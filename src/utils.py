@@ -80,13 +80,15 @@ class MoodStd(NamedTuple):
 class MoodWithWithout(NamedTuple):
     with_: MoodStd
     without: MoodStd
+    n_entries_with_: int
+    n_entries_without: int
 
     def calc_change(self) -> float:
         return (self.with_[0] - self.without[0]) / self.without[0]
 
     def __str__(self) -> str:
-        return f"""with:    {self.with_}
-without: {self.without}
+        return f"""with:    {self.with_} (n={self.n_entries_with_:,})
+without: {self.without} (n={self.n_entries_without:,})
 change:  {self.calc_change():.2%}"""
 
 
@@ -102,6 +104,15 @@ class StatsResult:
     note_length: tuple[float, float]
     entries_frequency: float | None
     number_of_activities: int
+
+    def __rshift__(self, other: StatsResult) -> MoodWithWithout:
+        mood_change = MoodWithWithout(
+            with_=other.mood,
+            without=self.mood,
+            n_entries_with_=0,
+            n_entries_without=0,
+        )
+        return mood_change
 
     def __repr__(self) -> str:
         FORMAT = "{}: {:.3f} ± {:.3f}{}"

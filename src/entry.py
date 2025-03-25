@@ -71,6 +71,12 @@ class Entry:
 
         Returns: bool: True if all conditions are met, False otherwise
         """
+        if condition is not None:
+            if include or exclude or note_pattern or predicate:
+                raise ValueError(
+                    "`condition` must be the only condition to check in the entry"
+                )
+            return condition.check(self)
         if predicate is not None and not predicate(self):
             return False
         if isinstance(include, str):
@@ -89,8 +95,7 @@ class Entry:
             else any(re.findall(pattern, self.note) for pattern in note_pattern)
         )
         return (
-            (True if condition is None else condition.check(self))
-            and (True if not include else bool(include & self.activities))
+            (True if not include else bool(include & self.activities))
             and (not exclude & self.activities)
             and note_condition_result
             and (True if predicate is None else predicate(self))

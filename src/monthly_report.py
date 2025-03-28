@@ -17,12 +17,21 @@ def generate_report_template(month: int, year: int, dataframe: Dataset):
     df_month = dataframe[_from:_to]
     df_month_groups = df_month.group_by("day")
 
-    EVENTS_COMMENT = f"total entries: {len(df_month)}\n\n"
+    books_content = ""
+    book_tags = df_month.get_book_tags()
+    if book_tags:
+        books_content += "\n## Книги\n"
+        for book_tag in book_tags:
+            books_content += f"- **{book_tag.title}** ({book_tag.author}) [{book_tag.full_date:%d.%m.%Y}]\n"
+            books_content += f"  {book_tag.body_clean}\n\n"
+        books_content += "\n"
+
+    events_comment = f"total entries: {len(df_month)}\n\n"
     for day, entries in df_month_groups.items():
-        EVENTS_COMMENT += f" -- {day:%d.%m.%Y, %a} --\n"
+        events_comment += f" -- {day:%d.%m.%Y, %a} --\n"
         for e in entries:
-            EVENTS_COMMENT += f"@{e.full_date.time():%H:%M}: {e.mood} {', '.join(e.activities)}\n  {e.note}\n"
-        EVENTS_COMMENT += "\n"
+            events_comment += f"@{e.full_date.time():%H:%M}: {e.mood} {', '.join(e.activities)}\n  {e.note}\n"
+        events_comment += "\n"
 
     month_word = datetime.date(1900, month, 1).strftime("%B")
     ROOT = pathlib.Path(".")
@@ -37,5 +46,5 @@ def generate_report_template(month: int, year: int, dataframe: Dataset):
         print(f"file {SAVE_TO} already exists")
         return
     with open(SAVE_TO, "w", encoding="utf-8") as f:
-        f.write(f"# {month_word} {year}\n\n<!---\n{EVENTS_COMMENT}\n--->")
+        f.write(f"# {month_word} {year}\n{books_content}\n## ...\n\n<!---\n{events_comment}\n--->")
     print(f"saved to {SAVE_TO}")

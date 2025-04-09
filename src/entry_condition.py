@@ -1,4 +1,3 @@
-import datetime
 import difflib
 import math
 from abc import ABC, abstractmethod
@@ -215,7 +214,7 @@ class Predicate(EntryCondition):
         return self.predicate(entry)
 
     def __repr__(self) -> str:
-        return f"Predicate()"
+        return "Predicate()"
 
     def __str__(self) -> str:
         return "Predicate()"

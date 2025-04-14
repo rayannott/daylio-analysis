@@ -293,7 +293,7 @@ class Dataset:
         """
         Returns the following statistics:
             - mood (avg ± std)
-            - note length [num symbols] (avg ± std)
+            - median note length [num symbols]
             - entries frequency [entries per day] (median)
             - total number of activities
         as a StatsResult object.
@@ -305,10 +305,7 @@ class Dataset:
         ]
         return StatsResult(
             mood=self.mood_std(),
-            note_length=(
-                mean(note_lengths),
-                stdev(note_lengths) if len(note_lengths) > 1 else 0.0,
-            ),
+            note_length=median(note_lengths),
             entries_frequency=24 * 60 * 60 / median(timedeltas_secs)
             if len(timedeltas_secs) > 1
             else None,
@@ -379,8 +376,8 @@ class Dataset:
         """
         return Plotter.by_time_bar_plot(self, what, swap_freq_mood)
 
-    def mood_change_activity(self, activity: str) -> go.Figure:
-        return Plotter.mood_change_activity(self, activity)
+    def mood_change_activity(self, *activity: str) -> go.Figure:
+        return Plotter.mood_change_activity(self, *activity)
 
     def entries_differences(self) -> go.Figure:
         return Plotter.entries_differences(self)

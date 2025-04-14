@@ -89,7 +89,7 @@ class CompleteAnalysis(NamedTuple):
 @dataclass
 class StatsResult:
     mood: MoodStd
-    note_length: tuple[float, float]
+    note_length: float
     entries_frequency: float | None
     number_of_activities: int
 
@@ -106,7 +106,7 @@ class StatsResult:
         FORMAT = "{}: {:.3f} ± {:.3f}{}"
         dat = [
             FORMAT.format("- mood", *self.mood, ""),
-            FORMAT.format("- note length", *self.note_length, " symbols"),
+            f"- median note length: {self.note_length} symbols",
         ]
         dat.append(f"- number of activities: {self.number_of_activities:,}")
         if self.entries_frequency:

@@ -13,9 +13,14 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 from src.utils import WEEKDAYS, MONTHS, GroupByTypes
+from src.entry_condition import Has
 
 if TYPE_CHECKING:
     from src.dataset import Dataset
+
+
+GREEN = "#97F66B"
+RED = "#FF522D"
 
 
 class Plotter:
@@ -140,49 +145,46 @@ class Plotter:
         return fig
 
     @staticmethod
-    def mood_change_activity(df: "Dataset", activity: str) -> go.Figure:
-        dates = []
-        with_ = []
-        without_ = []
-        n_entries_with_ = []
-        n_entries_without = []
-        errors_with_ = []
-        errors_without = []
-        no_activity_in: list[datetime.date] = []
-        for month, df_month in df.monthly_datasets().items():
-            try:
-                with_without = df_month.mood_with_without(activity)
-                without_.append(with_without.without.mood)
-                with_.append(with_without.with_.mood)
-                n_entries_with_.append(with_without.n_entries_with_)
-                n_entries_without.append(with_without.n_entries_without)
-                errors_with_.append(
-                    with_without.with_.std / sqrt(with_without.n_entries_with_)
+    def mood_change_activity(df: "Dataset", *activity: str) -> go.Figure:
+        def get_lines_for(_activity: str) -> tuple[go.Scatter, go.Scatter]:
+            dates = []
+            with_ = []
+            without_ = []
+            n_entries_with_ = []
+            n_entries_without = []
+            errors_with_ = []
+            errors_without = []
+            no_activity_in: list[datetime.date] = []
+            for month, df_month in df.monthly_datasets().items():
+                try:
+                    with_without = df_month.mood_with_without(_activity)
+                    without_.append(with_without.without.mood)
+                    with_.append(with_without.with_.mood)
+                    n_entries_with_.append(with_without.n_entries_with_)
+                    n_entries_without.append(with_without.n_entries_without)
+                    errors_with_.append(
+                        with_without.with_.std / sqrt(with_without.n_entries_with_)
+                    )
+                    errors_without.append(
+                        with_without.without.std / sqrt(with_without.n_entries_without)
+                    )
+                    dates.append(month)
+                except ValueError:
+                    no_activity_in.append(month)
+            if no_activity_in:
+                print(
+                    f"No {_activity!r} in {', '.join(month.strftime('%B %Y') for month in no_activity_in)}"
                 )
-                errors_without.append(
-                    with_without.without.std / sqrt(with_without.n_entries_without)
-                )
-                dates.append(month)
-            except ValueError:
-                no_activity_in.append(month)
-
-        if not dates:
-            raise ValueError(f"No activity {activity!r} in the dataset")
-
-        if no_activity_in:
-            print(
-                f"No {activity!r} in {', '.join(month.strftime('%B %Y') for month in no_activity_in)}"
-            )
-
-        fig = go.Figure(
-            data=[
+            # TODO: if only one activity, do as before; 
+            # TODO if more, put one line for "without everything" and one "with {act}" per activity
+            return (
                 go.Scatter(
                     x=dates,
                     y=with_,
                     error_y=dict(type="data", array=errors_with_),
-                    name="with",
+                    name=f"with {_activity}",
                     mode="lines+markers",
-                    marker=dict(color="#97F66B", symbol="cross-dot", size=10),
+                    marker=dict(color=GREEN, symbol="cross-dot", size=10),
                     line=dict(shape="spline", smoothing=1.3, dash="dash"),
                     customdata=n_entries_with_,
                     hovertemplate="%{y}<extra>%{customdata} entries</extra>",
@@ -191,23 +193,28 @@ class Plotter:
                     x=dates,
                     y=without_,
                     error_y=dict(type="data", array=errors_without),
-                    name="without",
+                    name=f"without {_activity}",
                     mode="lines+markers",
-                    marker=dict(color="#FF522D", symbol="x-dot", size=10),
+                    marker=dict(color=RED, symbol="x-dot", size=10),
                     line=dict(shape="spline", smoothing=1.3, dash="dash"),
                     customdata=n_entries_without,
                     hovertemplate="%{y}<extra>%{customdata} entries</extra>",
                 ),
-            ]
-        )
+            )
+
+        assert activity, "At least one activity must be provided"
+        for act in activity:
+            assert act in df.activities(), f"{act!r} is missing from the dataset"
+
+        scatters = []
+        for actv in activity:
+            scatters.extend(get_lines_for(actv))
+        fig = go.Figure(data=scatters)
         fig.update_layout(
             template="plotly_dark",
-            title=f"Mood with and without {activity!r}; mean ± se",
+            title="Mood with and without; mean ± se",
             xaxis=dict(title="Month"),
             yaxis=dict(title="Mood"),
-            legend=dict(
-                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
-            ),
         )
         return fig
 

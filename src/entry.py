@@ -1,7 +1,5 @@
 import datetime
 from dataclasses import dataclass, field
-import re
-from typing import Callable
 
 from src.tag import Tag
 from src.entry_condition import EntryCondition

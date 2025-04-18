@@ -379,17 +379,16 @@ class Dataset:
     def mood_change_activity(self, *activity: str) -> go.Figure:
         return Plotter.mood_change_activity(self, *activity)
 
+    def activities_effect_on_mood(self, n_threshold: int = 10) -> go.Figure:
+        return Plotter.activities_effect_on_mood(self, n_threshold)
+
     def entries_differences(self) -> go.Figure:
         return Plotter.entries_differences(self)
 
     def note_length_plot(self, groupby: GroupByTypes = "week") -> go.Figure:
         """
         Generates a line plot showing the average note lengths vs date.
-
-        Args:
-            cap_length (int, optional): If not -1, the length of each note is capped at this value.
-                If a note is longer than cap_length, its length is set to cap_length. Default is -1.
-
+        
         Returns:
             go.Figure: A plotly figure object representing the line plot.
         """

@@ -13,7 +13,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 from src.utils import WEEKDAYS, MONTHS, GroupByTypes
-from src.entry_condition import Has
 
 if TYPE_CHECKING:
     from src.dataset import Dataset
@@ -175,7 +174,7 @@ class Plotter:
                 print(
                     f"No {_activity!r} in {', '.join(month.strftime('%B %Y') for month in no_activity_in)}"
                 )
-            # TODO: if only one activity, do as before; 
+            # TODO: if only one activity, do as before;
             # TODO if more, put one line for "without everything" and one "with {act}" per activity
             return (
                 go.Scatter(
@@ -266,18 +265,6 @@ class Plotter:
 
     @staticmethod
     def note_length_plot(df: "Dataset", groupby: GroupByTypes) -> go.Figure:
-        """
-        Generates a line plot showing the average note lengths vs date.
-
-        Args:
-            cap_length (int, optional): If not -1, the length of each note is capped at this value.
-                If a note is longer than cap_length, its length is set to cap_length. Default is -1.
-
-        Returns:
-            go.Figure: A plotly figure object representing the line plot.
-
-        """
-
         def se(data: list[int]) -> float:
             return stdev(data) / len(data) if len(data) > 1 else 0
 
@@ -483,3 +470,45 @@ class Plotter:
             vmin=1.0,
             vmax=6.0,
         )
+
+    @staticmethod
+    def activities_effect_on_mood(df: "Dataset", n_threshold: int) -> go.Figure:
+        names = []
+        changes = []
+        hover_texts = []
+
+        for _name, _mood_with_without, _num_occ in df.complete_analysis(n_threshold):
+            delta = _mood_with_without.calc_change()
+            with_val = _mood_with_without.with_.mood
+            without_val = _mood_with_without.without.mood
+
+            names.append(_name)
+            changes.append(delta)
+            hover_texts.append(
+                f"{_name}: {without_val:.2f} → {with_val:.2f} (n={_num_occ})"
+            )
+
+        fig = go.Figure(
+            go.Bar(
+                x=changes,
+                y=names,
+                orientation="h",
+                text=[f"{c:+.1%}" for c in changes],
+                hovertext=hover_texts,
+                hoverinfo="text",
+                marker_color=["#2ca02c" if c >= 0 else "#d62728" for c in changes],
+            )
+        )
+
+        fig.add_vline(x=0, line_width=1, line_dash="dash", line_color="gray")
+
+        fig.update_layout(
+            title="Activities' Effect on Mood",
+            xaxis_title="Mood Change (%)",
+            yaxis=dict(autorange="reversed"),
+            height=20 * len(names),
+            margin=dict(l=100, r=20, t=50, b=20),
+            template="plotly_dark",
+        )
+
+        return fig

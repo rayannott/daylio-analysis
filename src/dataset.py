@@ -445,6 +445,9 @@ class Dataset:
         Generates a bar plot of the frequency of people in the dataset.
         """
         return Plotter.people_frequency(self)
+    
+    def plot_wordcloud(self, additional_stopwords: set[str] = set(), n_threshold: int = 3) -> None:
+        return Plotter.plot_wordcloud(self, additional_stopwords, n_threshold)
 
 
 if __name__ == "__main__":

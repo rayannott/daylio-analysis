@@ -3,3 +3,7 @@ plotly
 nbformat
 calplot
 pandas
+wordcloud
+natasha
+nltk
+setuptools

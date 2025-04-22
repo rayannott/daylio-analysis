@@ -4,15 +4,18 @@ import textwrap
 from math import sqrt
 from typing import Literal, Callable, TYPE_CHECKING
 from statistics import mean, stdev, median
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 import calplot
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import plotly.express as px
 
 from src.utils import WEEKDAYS, MONTHS, GroupByTypes
+from src.lang_utils import clean_english_text, clean_russian_text
+from wordcloud import WordCloud
 
 if TYPE_CHECKING:
     from src.dataset import Dataset
@@ -512,3 +515,22 @@ class Plotter:
         )
 
         return fig
+
+    @staticmethod
+    def plot_wordcloud(df: "Dataset", additional_stopwords: set[str], n_threshold: int) -> None:
+        def generate_tokens():
+            for ent in df.entries:
+                yield from clean_russian_text(ent.note, additional_stopwords)
+                yield from clean_english_text(ent.note, additional_stopwords)
+
+        tokens = list(generate_tokens())
+        cntr = Counter(tokens)
+        freqs = {el: fr for el, fr in cntr.items() if fr >= n_threshold}
+
+        wc = WordCloud(width=800, height=400, background_color="white")
+        wc.generate_from_frequencies(freqs)
+        plt.figure(figsize=(10, 5))
+        plt.imshow(wc, interpolation="bilinear")
+        plt.axis("off")
+        plt.tight_layout()
+        plt.show()

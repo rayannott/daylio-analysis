@@ -34,7 +34,7 @@ class Entry:
             activities=set(row["activities"].split(" | "))
             if row["activities"]
             else set(),
-            note=row["note"].replace("<br>", "\n"),
+            note=row["note"].replace("<br>", "\n").replace("&nbsp;", ""),
         )
 
     def __repr__(self) -> str:

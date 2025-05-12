@@ -220,4 +220,30 @@ class Predicate(EntryCondition):
         return "Predicate()"
 
 
-A = Has
+def compile(string: str) -> EntryCondition:
+    def process(part: str) -> EntryCondition:
+        if part.startswith(("!", "~")):
+            return ~Has(part[1:])
+        if part == "people":
+            return Has.people()
+        return Has(part)
+
+    # TODO: add parenthesis support
+    # e.g. "!(a & b) | c" == "!a | !b | c"
+
+    parts = [part.split("&") for part in string.split("|")]
+    has_parts = [[process(pt.strip()) for pt in and_part] for and_part in parts]
+    and_parts = [And(*and_part) for and_part in has_parts]
+    condition = Or(*and_parts) if len(and_parts) > 1 else and_parts[0]
+    return condition
+
+
+class A:
+    def __new__(cls, string: str) -> EntryCondition:
+        if "!" in string or "&" in string or "|" in string:
+            return compile(string)
+        return Has(string)
+
+    @classmethod
+    def people(cls) -> HasPeople:
+        return Has.people()

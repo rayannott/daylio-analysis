@@ -28,9 +28,16 @@ from src.utils import (
     parse_date,
 )
 
-REMOVE: set[str] = set(
-    json.load(open(pathlib.Path("data") / "to_remove.json", "r", encoding="utf-8-sig"))
-)
+TO_REMOVE_FILE = pathlib.Path("data") / "to_remove.json"
+
+if not TO_REMOVE_FILE.exists():
+    REMOVE: set[str] = set()
+    print(
+        f"Warning: {TO_REMOVE_FILE} not found. No activities will be removed from the dataset.")
+else:
+    with open(TO_REMOVE_FILE, "r", encoding="utf-8") as f:
+        REMOVE = set(json.load(f))
+
 
 DATETIME_PATTERN = re.compile(r"\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}")
 

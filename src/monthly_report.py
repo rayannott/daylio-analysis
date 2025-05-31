@@ -1,3 +1,4 @@
+import os
 import datetime
 import pathlib
 
@@ -35,8 +36,15 @@ def generate_report_template(month: int, year: int, dataframe: Dataset):
 
     month_word = datetime.date(1900, month, 1).strftime("%B")
     ROOT = pathlib.Path(".")
-    PERSONAL = pathlib.Path(
-        r"C:\Users\Airat\contents\pythoncode\personal\monthly-reports"
+    PERSONAL = (
+        (
+            pathlib.Path(r"C:\Users\Airat\contents")
+            if os.name == "nt"
+            else pathlib.Path.home()
+        )
+        / "pythoncode"
+        / "personal"
+        / "monthly-reports"
     )
     NEW_FILE_NAME = f"{year}-{month:02d}.md"
     SAVE_TO_ROOT = ROOT / NEW_FILE_NAME
@@ -46,5 +54,7 @@ def generate_report_template(month: int, year: int, dataframe: Dataset):
         print(f"file {SAVE_TO} already exists")
         return
     with open(SAVE_TO, "w", encoding="utf-8") as f:
-        f.write(f"# {month_word} {year}\n{books_content}\n## ...\n\n<!---\n{events_comment}\n--->")
+        f.write(
+            f"# {month_word} {year}\n{books_content}\n## ...\n\n<!---\n{events_comment}\n--->"
+        )
     print(f"saved to {SAVE_TO}")

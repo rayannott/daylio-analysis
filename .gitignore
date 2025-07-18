@@ -5,3 +5,4 @@ venv/
 network.html
 lib/
 corr.html
+*.env

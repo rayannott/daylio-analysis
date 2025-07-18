@@ -7,3 +7,5 @@ wordcloud
 natasha
 nltk
 setuptools
+python-dotenv
+supabase

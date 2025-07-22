@@ -86,14 +86,22 @@ def update_books(book_tags: list[BookTag]):
 
     new_books = [Book.from_book_tag(bt) for bt in book_tags]
 
+    n_new_books, n_updated_books = 0, 0
+
     for book in new_books:
         key = (book.title, book.dt_read)
         existing = existing_books.get(key)
         if existing is None:
             t0 = pc()
             book.insert(client)
-            print(f"Inserted {book} ({pc() - t0:.3f} sec)")
+            print(f"inserted {book} ({pc() - t0:.3f} sec)")
+            n_new_books += 1
         elif book != existing:
             t0 = pc()
             book.update(client)
-            print(f"Updated {book} ({pc() - t0:.3f} sec)")
+            print(f"updated {book} ({pc() - t0:.3f} sec)")
+            n_updated_books += 1
+    if n_new_books or n_updated_books:
+        print(f"Inserted {n_new_books} new books, updated {n_updated_books} books.")
+    else:
+        print("No new books or updates found.")

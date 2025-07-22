@@ -46,6 +46,7 @@ GroupByTypes = Literal["day", "week", "month"]
 EntryPredicate = Callable[["Entry"], bool]
 
 FMTS = ["%d.%m.%Y", "%d %b %Y", "%d %B %Y"]
+FMTS.extend([fmt + " %H:%M" for fmt in FMTS])  # Add time to each date format
 
 
 def parse_date(date: str) -> datetime.datetime:

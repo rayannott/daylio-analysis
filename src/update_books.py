@@ -1,7 +1,6 @@
 import os
 from typing import NamedTuple
 from datetime import datetime
-from time import perf_counter as pc
 
 from supabase import Client, create_client
 import dotenv
@@ -72,6 +71,22 @@ class Book(NamedTuple):
             .execute()
         )
 
+    def diff(self, other: "Book") -> dict:
+        if self == other:
+            return {}
+        diff = {}
+        if self.title != other.title:
+            diff["title"] = (self.title, other.title)
+        if self.author != other.author:
+            diff["author"] = (self.author, other.author)
+        if self.rating != other.rating:
+            diff["rating"] = (self.rating, other.rating)
+        if self.n_pages != other.n_pages:
+            diff["n_pages"] = (self.n_pages, other.n_pages)
+        if self.body != other.body:
+            diff["body"] = (self.body, other.body)
+        return diff
+
 
 def update_books(book_tags: list[BookTag]):
     client = create_client(
@@ -92,14 +107,15 @@ def update_books(book_tags: list[BookTag]):
         key = (book.title, book.dt_read)
         existing = existing_books.get(key)
         if existing is None:
-            t0 = pc()
             book.insert(client)
-            print(f"inserted {book} ({pc() - t0:.3f} sec)")
+            print(f"inserted {book}")
             n_new_books += 1
         elif book != existing:
-            t0 = pc()
+            diff = book.diff(existing)
             book.update(client)
-            print(f"updated {book} ({pc() - t0:.3f} sec)")
+            print(f"updated {book}:")
+            for field, (old, new) in diff.items():
+                print(f"     - {field}: {old!r} -> {new!r}")
             n_updated_books += 1
     if n_new_books or n_updated_books:
         print(f"Inserted {n_new_books} new books, updated {n_updated_books} books.")

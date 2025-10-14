@@ -17,6 +17,8 @@ from src.utils import WEEKDAYS, MONTHS, GroupByTypes
 from src.lang_utils import clean_english_text, clean_russian_text
 from wordcloud import WordCloud
 
+from src.tag import BookTag
+
 if TYPE_CHECKING:
     from src.dataset import Dataset
 
@@ -390,12 +392,18 @@ class Plotter:
             for book in book_tags
         ]
 
+        def book_wrap_number_of_pages(book: BookTag) -> int:
+            n_pages = book.number_of_pages or 0
+            if "comic" in book.body_clean:
+                return int(0.25 * n_pages)  # comics are easier to read
+            return n_pages
+
         fig = go.Figure()
 
         fig.add_trace(
             go.Bar(
                 x=x_ind,
-                y=[book.number_of_pages for book in book_tags],
+                y=[book_wrap_number_of_pages(book) for book in book_tags],
                 marker=dict(
                     color=[(book.rating or 5.5) for book in book_tags],
                     colorscale="Viridis",
@@ -517,7 +525,9 @@ class Plotter:
         return fig
 
     @staticmethod
-    def plot_wordcloud(df: "Dataset", additional_stopwords: set[str], n_threshold: int) -> None:
+    def plot_wordcloud(
+        df: "Dataset", additional_stopwords: set[str], n_threshold: int
+    ) -> None:
         def generate_tokens():
             for ent in df.entries:
                 yield from clean_russian_text(ent.note, additional_stopwords)

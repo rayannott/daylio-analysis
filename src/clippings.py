@@ -11,11 +11,11 @@ from collections import defaultdict
 CLIPPINGS_TXT = pathlib.Path("data", "clippings.txt")
 
 
-LOCATION_RANGE_RE = re.compile(r"location (\d+)-(\d+)")
-LOCATION_RE = re.compile(r"location (\d+)")
+LOCATION_RANGE_RE = re.compile(r"[Ll]ocation (\d+)-(\d+)")
+LOCATION_RE = re.compile(r"[Ll]ocation (\d+)")
 PAGE_RE = re.compile(r"on page (\d+)")
 DATETIME_RE = re.compile(r"Added on (.+)$")
-TITLE_AUTHOR_RE = re.compile(r"([\w\s',-]+) \(([\w\s',-]+)\)")
+TITLE_AUTHOR_RE = re.compile(r"([\w\s',-.]+) \(([\w\s',-.]+)\)")
 
 RUSSIAN_ALPH = set(chr(i) for i in range(ord("а"), ord("я") + 1))
 
@@ -58,7 +58,7 @@ def extract_datetime_page(line: str):
 def extract_title_author(line: str) -> tuple[str, str]:
     title_author_match = TITLE_AUTHOR_RE.match(line)
     if title_author_match is None:
-        raise ValueError()
+        raise ValueError(line)
     title, author = title_author_match.groups()
     return title, author
 
@@ -114,7 +114,16 @@ def compile_highlights(lines: list[str]) -> list[Highlight]:
                 assert len(loc) == 2
                 title, author = extract_title_author(sections[0])
                 dt, page = extract_datetime_page(sections[1])
-                res.append(Highlight(title, author, page, loc, dt, sections[2]))
+                res.append(
+                    Highlight(
+                        title,
+                        author,
+                        page,
+                        loc,
+                        dt,
+                        "\n".join(sections[2:]),
+                    )
+                )
             case ClipType.NOTE:
                 assert len(loc) == 1
                 for early_highlight in reversed(res):

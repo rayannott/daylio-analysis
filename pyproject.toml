@@ -1,0 +1,25 @@
+[project]
+name = "daylio-analysis"
+version = "0.1.0"
+description = "Analysis tooling for Daylio digital journal exports."
+requires-python = ">=3.13"
+dependencies = [
+    "calplot",
+    "ipykernel",
+    "natasha",
+    "nbformat",
+    "nltk",
+    "pandas",
+    "plotly",
+    "pydantic",
+    "python-dotenv",
+    "scikit-learn",
+    "scipy",
+    "setuptools",
+    "statsmodels",
+    "supabase",
+    "wordcloud",
+]
+
+[tool.uv]
+package = false

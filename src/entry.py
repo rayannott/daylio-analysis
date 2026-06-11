@@ -1,5 +1,6 @@
 import datetime
-from dataclasses import dataclass, field
+
+from pydantic import BaseModel, PrivateAttr, field_validator, model_validator
 
 from src.tag import Tag
 from src.entry_condition import EntryCondition
@@ -13,32 +14,48 @@ from src.utils import (
 )
 
 
-@dataclass
-class Entry:
+class Entry(BaseModel):
+    """A single journal entry, validated directly from a CSV row dict."""
+
     full_date: datetime.datetime
     mood: float
     activities: set[str]
     note: str
-    _tags: list[Tag] = field(default_factory=list)
 
-    def __post_init__(self):
-        self._tags = list(Tag.pull_tags(self))
+    _tags: list[Tag] = PrivateAttr(default_factory=list)
 
+    @model_validator(mode="before")
     @classmethod
-    def from_dict(cls, row: dict[str, str]) -> "Entry":
-        """Construct an Entry object from a dictionary with the keys as in the CSV file."""
-        datetime_str = row["full_date"] + " " + row["time"]
-        return cls(
-            full_date=datetime.datetime.strptime(datetime_str, DT_FORMAT_READ),
-            mood=MOOD_VALUES[row["mood"]],
-            activities=set(row["activities"].split(" | "))
-            if row["activities"]
-            else set(),
-            note=row["note"].replace("<br>", "\n").replace("&nbsp;", ""),
-        )
+    def _merge_date_and_time(cls, row: dict[str, str]) -> dict[str, str]:
+        return {**row, "full_date": f"{row['full_date']} {row['time']}"}
+
+    @field_validator("full_date", mode="before")
+    @classmethod
+    def _parse_full_date(cls, value: str) -> datetime.datetime:
+        return datetime.datetime.strptime(value, DT_FORMAT_READ)
+
+    @field_validator("mood", mode="before")
+    @classmethod
+    def _lookup_mood(cls, value: str) -> float:
+        return MOOD_VALUES[value]
+
+    @field_validator("activities", mode="before")
+    @classmethod
+    def _split_activities(cls, value: str) -> set[str]:
+        return set(value.split(" | ")) if value else set()
+
+    @field_validator("note", mode="before")
+    @classmethod
+    def _clean_note(cls, value: str) -> str:
+        return value.replace("<br>", "\n").replace("&nbsp;", "")
+
+    def model_post_init(self, _context: object) -> None:
+        self._tags = list(Tag.pull_tags(self))
 
     def __repr__(self) -> str:
         return f"[{self.full_date.strftime(DT_FORMAT_SHOW)}] {self.mood} {', '.join(sorted(self.activities))}"
+
+    __str__ = __repr__
 
     def verbose(self) -> str:
         return f"{self}\n{'{'}{self.note}{'}'}"

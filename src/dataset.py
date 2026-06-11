@@ -49,7 +49,7 @@ class Dataset:
         with open(csv_file_path, "r", encoding="utf-8-sig") as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
-                entries.append(Entry.from_dict(row))
+                entries.append(Entry.model_validate(row))
         return entries
 
     def __init__(

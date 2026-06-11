@@ -148,6 +148,42 @@ class TrendReport(BaseModel):
     habit_trends: list[HabitTrend]
 
 
+# ── monthly ───────────────────────────────────────────────────────────
+
+class ActivityFrequency(BaseModel):
+    activity: str
+    count: int
+    frequency: float
+
+
+class MonthComparison(BaseModel):
+    mood_delta: float
+    mood_delta_pct: float
+    entries_delta: int
+    note_length_delta: float
+    baseline_months: int
+    baseline_mood: float
+
+
+class MonthSummary(BaseModel):
+    month: datetime.date
+    n_entries: int
+    n_days_logged: int
+    mood_mean: float
+    mood_std: float
+    best_day: datetime.date
+    worst_day: datetime.date
+    top_activities: list[ActivityFrequency]
+    comparison: MonthComparison | None
+    outliers: list[MoodAnomaly]
+    streaks: list[Streak]
+
+
+class MonthlyReport(BaseModel):
+    summary: MonthSummary
+    activity_effects: ActivityMoodReport
+
+
 # ── top-level bundle ──────────────────────────────────────────────────
 
 class FullReport(BaseModel):

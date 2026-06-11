@@ -2,9 +2,14 @@
 
 Usage::
 
-    from src.analytics import analyze
+    from src.analytics import analyze, get_monthly_report
+    from src.analytics.report import generate_full_report, generate_monthly_report
+
     report = analyze(df)
     print(report.model_dump_json(indent=2))
+
+    generate_full_report(df)
+    generate_monthly_report(df, date(2026, 4, 1))
 """
 
 from typing import TYPE_CHECKING
@@ -17,6 +22,7 @@ from src.analytics.schemas import (
     ActivityMoodReport,
     MoodRegressionResult,
     ActivityAssociationReport,
+    MonthlyReport,
 )
 from src.analytics.correlations import (
     activity_mood_effects,
@@ -26,6 +32,7 @@ from src.analytics.correlations import (
 )
 from src.analytics.anomalies import detect_anomalies
 from src.analytics.trends import analyze_trends
+from src.analytics.monthly import get_monthly_report
 
 if TYPE_CHECKING:
     from src.dataset import Dataset
@@ -38,6 +45,7 @@ __all__ = [
     "lagged_activity_effects",
     "detect_anomalies",
     "analyze_trends",
+    "get_monthly_report",
     "FullReport",
     "CorrelationReport",
     "AnomalyReport",
@@ -45,6 +53,7 @@ __all__ = [
     "ActivityMoodReport",
     "MoodRegressionResult",
     "ActivityAssociationReport",
+    "MonthlyReport",
 ]
 
 

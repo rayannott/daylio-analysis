@@ -13,6 +13,7 @@ dependencies = [
     "plotly",
     "pydantic",
     "python-dotenv",
+    "report-creator>=1.2.5",
     "scikit-learn",
     "scipy",
     "setuptools",

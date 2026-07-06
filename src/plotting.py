@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import plotly.express as px
 
-from src.utils import WEEKDAYS, MONTHS, GroupByTypes
+from src.utils import WEEKDAYS, MONTHS, GroupByTypes, EMOTIONS, POSITIVE_EMOTIONS
 from src.lang_utils import clean_english_text, clean_russian_text
 from wordcloud import WordCloud
 
@@ -522,6 +522,167 @@ class Plotter:
             template="plotly_dark",
         )
 
+        return fig
+
+    @staticmethod
+    def _hex_to_rgba(hex_color: str, alpha: float) -> str:
+        h = hex_color.lstrip("#")
+        r, g, b = (int(h[i : i + 2], 16) for i in (0, 2, 4))
+        return f"rgba({r},{g},{b},{alpha})"
+
+    @staticmethod
+    def activity_people_emotion_sankey(
+        df: "Dataset",
+        top_activities: int = 12,
+        top_people: int = 12,
+        top_emotions: int = 12,
+    ) -> go.Figure:
+        NO_PEOPLE = "(no people)"
+
+        def is_person(a: str) -> bool:
+            return a[0].isupper()
+
+        # rank tags within each layer, then keep only the top N of each
+        act_counts: Counter[str] = Counter()
+        ppl_counts: Counter[str] = Counter()
+        emo_counts: Counter[str] = Counter()
+        for entry in df:
+            for a in entry.activities:
+                if a in EMOTIONS:
+                    emo_counts[a] += 1
+                elif is_person(a):
+                    ppl_counts[a] += 1
+                else:
+                    act_counts[a] += 1
+        top_act = {a for a, _ in act_counts.most_common(top_activities)}
+        top_ppl = {a for a, _ in ppl_counts.most_common(top_people)}
+        top_emo = {a for a, _ in emo_counts.most_common(top_emotions)}
+
+        ap_links: Counter[tuple[str, str]] = Counter()  # activity -> person
+        pe_links: Counter[tuple[str, str]] = Counter()  # person -> emotion
+        for entry in df:
+            acts = {a for a in entry.activities if a in top_act}
+            ppl = {a for a in entry.activities if a in top_ppl} or {NO_PEOPLE}
+            emos = {a for a in entry.activities if a in top_emo}
+            for a in acts:
+                for p in ppl:
+                    ap_links[(a, p)] += 1
+            for p in ppl:
+                for e in emos:
+                    pe_links[(p, e)] += 1
+
+        used_acts = {a for a, _ in ap_links}
+        used_ppl = {p for _, p in ap_links} | {p for p, _ in pe_links}
+        used_emos = {e for _, e in pe_links}
+
+        activity_nodes = [a for a, _ in act_counts.most_common() if a in used_acts]
+        people_nodes = ([NO_PEOPLE] if NO_PEOPLE in used_ppl else []) + [
+            p for p, _ in ppl_counts.most_common() if p in used_ppl
+        ]
+        emotion_nodes = [e for e, _ in emo_counts.most_common() if e in used_emos]
+
+        ACT_COLOR, PPL_COLOR, NOPPL_COLOR = "#4C9BE0", "#B57EDC", "#777777"
+
+        def emo_color(e: str) -> str:
+            return GREEN if e in POSITIVE_EMOTIONS else RED
+
+        labels = activity_nodes + people_nodes + emotion_nodes
+        idx = {name: i for i, name in enumerate(labels)}
+        node_colors = (
+            [ACT_COLOR] * len(activity_nodes)
+            + [NOPPL_COLOR if p == NO_PEOPLE else PPL_COLOR for p in people_nodes]
+            + [emo_color(e) for e in emotion_nodes]
+        )
+
+        sources, targets, values, link_colors = [], [], [], []
+        for (a, p), v in ap_links.items():
+            sources.append(idx[a])
+            targets.append(idx[p])
+            values.append(v)
+            link_colors.append(Plotter._hex_to_rgba(ACT_COLOR, 0.35))
+        for (p, e), v in pe_links.items():
+            sources.append(idx[p])
+            targets.append(idx[e])
+            values.append(v)
+            link_colors.append(Plotter._hex_to_rgba(emo_color(e), 0.35))
+
+        fig = go.Figure(
+            go.Sankey(
+                node=dict(label=labels, color=node_colors, pad=15, thickness=18),
+                link=dict(
+                    source=sources, target=targets, value=values, color=link_colors
+                ),
+            )
+        )
+        fig.update_layout(
+            template="plotly_dark",
+            title="Activity → Person → Emotion",
+            font=dict(size=12),
+            margin=dict(l=10, r=10, t=40, b=10),
+        )
+        return fig
+
+    @staticmethod
+    def timeline(
+        df: "Dataset",
+        what: Literal["people", "emotions", "activities"] = "people",
+        min_count: int = 5,
+    ) -> go.Figure:
+
+        def category_of(a: str) -> str:
+            if a in EMOTIONS:
+                return "emotions"
+            if a[0].isupper():
+                return "people"
+            return "activities"
+
+        points: defaultdict[str, list[tuple[datetime.datetime, float]]] = defaultdict(
+            list
+        )
+        for entry in df:
+            for a in entry.activities:
+                if category_of(a) == what:
+                    points[a].append((entry.full_date, entry.mood))
+
+        tags = [t for t, pts in points.items() if len(pts) >= min_count]
+        # earliest first appearance -> top of the chart
+        by_first = sorted(tags, key=lambda t: min(d for d, _ in points[t]))
+
+        xs, ys, moods = [], [], []
+        for t in tags:
+            for d, m in points[t]:
+                xs.append(d)
+                ys.append(t)
+                moods.append(m)
+
+        fig = go.Figure(
+            go.Scatter(
+                x=xs,
+                y=ys,
+                mode="markers",
+                marker=dict(
+                    color=moods,
+                    colorscale="RdYlGn",
+                    cmin=1.0,
+                    cmax=6.0,
+                    showscale=True,
+                    colorbar=dict(title="Mood"),
+                    size=7,
+                    opacity=0.6,
+                    line=dict(width=0),
+                ),
+                hovertemplate="%{y}<br>%{x|%d.%m.%Y}<br>Mood: %{marker.color:.2f}<extra></extra>",
+            )
+        )
+        fig.update_layout(
+            template="plotly_dark",
+            title=f"{what.capitalize()} over time",
+            xaxis_title="Date",
+            height=max(300, 26 * len(tags)),
+            margin=dict(l=10, r=10, t=40, b=10),
+        )
+        # categoryarray is bottom-to-top, so reverse to put the earliest on top
+        fig.update_yaxes(categoryorder="array", categoryarray=by_first[::-1])
         return fig
 
     @staticmethod

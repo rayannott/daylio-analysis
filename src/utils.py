@@ -36,6 +36,31 @@ MOOD_VALUES = {
     "awesome": 6.0,
 }
 
+POSITIVE_EMOTIONS = {
+    "excited",
+    "satisfied",
+    "relaxed",
+    "amused",
+    "happy",
+    "grateful",
+    "productive",
+}
+NEGATIVE_EMOTIONS = {
+    "bored",
+    "tired",
+    "sad",
+    "annoyed",
+    "angry",
+    "unsure",
+    "anxious",
+    "worried",
+    "nervous",
+    "stressed",
+    "sick",
+    "procrastinating",
+}
+EMOTIONS = POSITIVE_EMOTIONS | NEGATIVE_EMOTIONS
+
 DT_FORMAT_READ = r"%Y-%m-%d %H:%M"
 DT_FORMAT_SHOW = r"%d.%m.%Y %H:%M"
 DATE_FORMAT_SHOW = r"%d.%m.%Y"

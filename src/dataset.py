@@ -456,6 +456,28 @@ class Dataset:
     def plot_wordcloud(self, additional_stopwords: set[str] = set(), n_threshold: int = 3) -> None:
         return Plotter.plot_wordcloud(self, additional_stopwords, n_threshold)
 
+    def activity_people_emotion_sankey(
+        self,
+        top_activities: int = 12,
+        top_people: int = 12,
+        top_emotions: int = 12,
+    ) -> go.Figure:
+        """Three-stage Sankey: activity → person (or '(no people)') → emotion."""
+        return Plotter.activity_people_emotion_sankey(
+            self, top_activities, top_people, top_emotions
+        )
+
+    def timeline(
+        self,
+        what: Literal["people", "emotions", "activities"] = "people",
+        min_count: int = 5,
+    ) -> go.Figure:
+        """A marker per tag-mention over time, colored by mood, one row per tag.
+
+        what: 'people', 'emotions', or 'activities'.
+        """
+        return Plotter.timeline(self, what, min_count)
+
 
 if __name__ == "__main__":
     # run `python -i dataset.py` to use in the terminal
